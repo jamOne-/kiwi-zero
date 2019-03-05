@@ -3,4 +3,5 @@
   "go.lintFlags": [
     "--exclude=\"\bexported \\w+ (\\S*['.]*)([a-zA-Z'.*]*) should have comment or be unexported\b\""
   ],
+  "go.lintOnSave": "off"
 }
