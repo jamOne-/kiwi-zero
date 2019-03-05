@@ -55,7 +55,7 @@ func (game *Game) GetPossibleMoves() []Move {
 	result = append(result, -1)
 
 	for field := int8(0); field < TOTAL_SIZE; field++ {
-		if len(GetKilledPawns(game.board, field, game.turn)) > 0 {
+		if game.board[field] == EMPTY && len(GetKilledPawns(game.board, field, game.turn)) > 0 {
 			result = append(result, field)
 		}
 	}
