@@ -2,11 +2,11 @@ package main
 
 import "fmt"
 
-type Player = int8
+type PlayerColor = int8
 type Field = int8
 type Move = Field
 type Game struct {
-	turn  Player
+	turn  PlayerColor
 	board []Field
 }
 
@@ -16,24 +16,24 @@ const EMPTY = Field(0)
 const WHITE = Field(-1)
 const BLACK = Field(1)
 
-func GetYX(field Field) (int8, int8) {
+func getYX(field Field) (int8, int8) {
 	return field / BOARD_SIZE, field % BOARD_SIZE
 }
 
-func YXToField(y int8, x int8) Field {
+func yXToField(y int8, x int8) Field {
 	return y*BOARD_SIZE + x
 }
 
 func NewGame() *Game {
 	turn := BLACK
 	board := make([]Field, TOTAL_SIZE)
-	board[YXToField(3, 3)], board[YXToField(4, 4)] = WHITE, WHITE
-	board[YXToField(3, 4)], board[YXToField(4, 3)] = BLACK, BLACK
+	board[yXToField(3, 3)], board[yXToField(4, 4)] = WHITE, WHITE
+	board[yXToField(3, 4)], board[yXToField(4, 3)] = BLACK, BLACK
 
 	return &Game{turn, board}
 }
 
-func (game *Game) MakeMove(move Move) (bool, Player) {
+func (game *Game) MakeMove(move Move) (bool, PlayerColor) {
 	currentPlayer := game.turn
 	game.turn *= -1
 
@@ -43,7 +43,7 @@ func (game *Game) MakeMove(move Move) (bool, Player) {
 
 	game.board[move] = currentPlayer
 
-	for _, field := range GetKilledPawns(game.board, move, currentPlayer) {
+	for _, field := range getKilledPawns(game.board, move, currentPlayer) {
 		game.board[field] = currentPlayer
 	}
 
@@ -55,7 +55,7 @@ func (game *Game) GetPossibleMoves() []Move {
 	result = append(result, -1)
 
 	for field := int8(0); field < TOTAL_SIZE; field++ {
-		if game.board[field] == EMPTY && len(GetKilledPawns(game.board, field, game.turn)) > 0 {
+		if game.board[field] == EMPTY && len(getKilledPawns(game.board, field, game.turn)) > 0 {
 			result = append(result, field)
 		}
 	}
@@ -63,7 +63,7 @@ func (game *Game) GetPossibleMoves() []Move {
 	return result
 }
 
-func (game *Game) IsGameFinished() (bool, Player) {
+func (game *Game) IsGameFinished() (bool, PlayerColor) {
 	currentPlayerMoves := game.GetPossibleMoves()
 
 	if len(currentPlayerMoves) > 1 {
@@ -106,10 +106,10 @@ func (game *Game) CountPawns() (int8, int8) {
 	return black, white
 }
 
-func GetKilledPawns(board []Field, start Field, player Player) []Field {
+func getKilledPawns(board []Field, start Field, player PlayerColor) []Field {
 	opponent := player * -1
 	result := make([]Field, 0, 4)
-	startY, startX := GetYX(start)
+	startY, startX := getYX(start)
 	deltas := []int8{-1, 0, 1}
 
 	for _, dy := range deltas {
@@ -121,7 +121,7 @@ func GetKilledPawns(board []Field, start Field, player Player) []Field {
 			candidates := make([]Field, 0, 4)
 
 			for y, x := startY+dy, startX+dx; x >= 0 && x < BOARD_SIZE && y >= 0 && y < BOARD_SIZE; y, x = y+dy, x+dx {
-				field := YXToField(y, x)
+				field := yXToField(y, x)
 				pawn := board[field]
 
 				if pawn == opponent {
