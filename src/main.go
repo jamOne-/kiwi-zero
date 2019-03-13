@@ -4,7 +4,7 @@ import "fmt"
 
 func main() {
 	game := NewGame()
-	player1 := NewHumanPlayer()
+	player1 := NewMinMaxPlayer(3)
 	player2 := NewRandomPlayer()
 
 	game.DrawBoard()
