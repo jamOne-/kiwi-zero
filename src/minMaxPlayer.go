@@ -47,7 +47,7 @@ func negaMax(game *Game, depth int, a int, b int) (int, Move) {
 			bestMove = move
 		}
 
-		a := max(a, value)
+		a = max(a, value)
 
 		if a >= b {
 			break
