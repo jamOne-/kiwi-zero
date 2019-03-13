@@ -6,8 +6,9 @@ type PlayerColor = int8
 type Field = int8
 type Move = Field
 type Game struct {
-	turn  PlayerColor
-	board []Field
+	turn    PlayerColor
+	board   []Field
+	history []Move
 }
 
 const BOARD_SIZE = 8
@@ -27,24 +28,34 @@ func yXToField(y int8, x int8) Field {
 func NewGame() *Game {
 	turn := BLACK
 	board := make([]Field, TOTAL_SIZE)
+	history := make([]Move, 0, TOTAL_SIZE)
 	board[yXToField(3, 3)], board[yXToField(4, 4)] = WHITE, WHITE
 	board[yXToField(3, 4)], board[yXToField(4, 3)] = BLACK, BLACK
 
-	return &Game{turn, board}
+	return &Game{turn, board, history}
+}
+
+func (game *Game) Copy() *Game {
+	turn := game.turn
+	board := make([]Field, TOTAL_SIZE)
+	history := make([]Move, len(game.history), TOTAL_SIZE)
+	copy(board, game.board)
+	copy(history, game.history)
+
+	return &Game{turn, board, history}
 }
 
 func (game *Game) MakeMove(move Move) (bool, PlayerColor) {
 	currentPlayer := game.turn
 	game.turn *= -1
+	game.history = append(game.history, move)
 
-	if move == -1 {
-		return false, EMPTY
-	}
+	if move != -1 {
+		game.board[move] = currentPlayer
 
-	game.board[move] = currentPlayer
-
-	for _, field := range getKilledPawns(game.board, move, currentPlayer) {
-		game.board[field] = currentPlayer
+		for _, field := range getKilledPawns(game.board, move, currentPlayer) {
+			game.board[field] = currentPlayer
+		}
 	}
 
 	return game.IsGameFinished()
@@ -64,19 +75,24 @@ func (game *Game) GetPossibleMoves() []Move {
 }
 
 func (game *Game) IsGameFinished() (bool, PlayerColor) {
-	currentPlayerMoves := game.GetPossibleMoves()
+	turns := len(game.history)
+	if turns < 2 || game.history[turns-2] != -1 || game.history[turns-1] != -1 {
+		currentPlayerMoves := game.GetPossibleMoves()
 
-	if len(currentPlayerMoves) > 1 {
-		return false, EMPTY
+		if len(currentPlayerMoves) > 1 {
+			return false, EMPTY
+		}
+
+		game.turn *= -1
+		nextPlayerMoves := game.GetPossibleMoves()
+		game.turn *= -1
+
+		if len(nextPlayerMoves) > 1 {
+			return false, EMPTY
+		}
 	}
 
-	game.turn *= -1
-	nextPlayerMoves := game.GetPossibleMoves()
-	game.turn *= -1
-
-	if len(nextPlayerMoves) > 1 {
-		return false, EMPTY
-	}
+	// evaluating winner
 
 	blacks, whites := game.CountPawns()
 	winner := EMPTY
