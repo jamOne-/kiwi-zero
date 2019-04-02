@@ -38,7 +38,7 @@ func NewGame() *Game {
 func (game *Game) Copy() *Game {
 	turn := game.turn
 	board := make([]Field, TOTAL_SIZE)
-	history := make([]Move, len(game.history), TOTAL_SIZE)
+	history := make([]Move, len(game.history), cap(game.history))
 	copy(board, game.board)
 	copy(history, game.history)
 
