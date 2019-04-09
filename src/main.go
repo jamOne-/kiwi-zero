@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"time"
 )
 
 func main() {
@@ -11,7 +12,8 @@ func main() {
 	for gameNumber := 0; gameNumber < NUMBER_OF_GAMES; gameNumber += 1 {
 		game := NewGame()
 		player1 := NewMonteCarloTreeSearchPlayer()
-		player2 := NewMinMaxPlayer(3)
+		player2 := NewMinMaxPlayer(7)
+		// player2 := NewRandomPlayer()
 
 		// game.DrawBoard()
 		// fmt.Println("")
@@ -20,7 +22,7 @@ func main() {
 
 		for !finished {
 			var move Move
-			// start := time.Now()
+			start := time.Now()
 
 			if game.turn > 0 {
 				move = player1.SelectMove(game)
@@ -28,7 +30,7 @@ func main() {
 				move = player2.SelectMove(game)
 			}
 
-			// fmt.Printf("player %d was thinking for %s\n", game.turn, time.Since(start))
+			fmt.Printf("player %d was thinking for %s\n", game.turn, time.Since(start))
 			// fmt.Println(move)
 			finished, winner = game.MakeMove(move)
 			// game.DrawBoard()
