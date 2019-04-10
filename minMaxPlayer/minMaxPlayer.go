@@ -1,4 +1,9 @@
-package main
+package minMaxPlayer
+
+import (
+	"github.com/jamOne-/kiwi-zero/game"
+	"github.com/jamOne-/kiwi-zero/reversi"
+)
 
 const INFINITY = 99999999
 
@@ -18,25 +23,25 @@ func NewMinMaxPlayer(depth int) *MinMaxPlayer {
 	return &MinMaxPlayer{depth}
 }
 
-func (player *MinMaxPlayer) SelectMove(game *Game) Move {
+func (player *MinMaxPlayer) SelectMove(game *reversi.Game) game.Move {
 	_, move := negaMax(game, player.depth, -INFINITY, INFINITY)
 	return move
 }
 
-func negaMax(game *Game, depth int, a int, b int) (int, Move) {
-	if finished, winner := game.IsGameFinished(); finished {
-		return INFINITY * int(winner) * int(game.turn), Move(-1)
+func negaMax(g *reversi.Game, depth int, a int, b int) (int, game.Move) {
+	if finished, winner := g.IsGameFinished(); finished {
+		return INFINITY * int(winner) * int(g.Turn), game.Move(-1)
 	}
 
 	if depth == 0 {
-		return heuristicValueFunction(game), Move(-1)
+		return heuristicValueFunction(g), game.Move(-1)
 	}
 
-	moves := game.GetPossibleMoves()
-	bestValue, bestMove := -INFINITY, Move(-1)
+	moves := g.GetPossibleMoves()
+	bestValue, bestMove := -INFINITY, game.Move(-1)
 
 	for _, move := range moves {
-		gameCopy := game.Copy()
+		gameCopy := g.Copy().(*reversi.Game)
 		gameCopy.MakeMove(move)
 
 		value, _ := negaMax(gameCopy, depth-1, -b, -a)
@@ -57,15 +62,15 @@ func negaMax(game *Game, depth int, a int, b int) (int, Move) {
 	return bestValue, bestMove
 }
 
-func heuristicValueFunction(game *Game) int {
+func heuristicValueFunction(game *reversi.Game) int {
 	blacks, whites := 0, 0
 	blackScore, whiteScore := 0, 0
 
-	for i, pawn := range game.board {
-		if pawn == BLACK {
+	for i, pawn := range game.Board {
+		if pawn == reversi.BLACK {
 			blacks += 1
 			blackScore += SCORING[i]
-		} else if pawn == WHITE {
+		} else if pawn == reversi.WHITE {
 			whites += 1
 			whiteScore += SCORING[i]
 		}
@@ -78,7 +83,7 @@ func heuristicValueFunction(game *Game) int {
 		p = -100.0 * whites / (blacks + whites)
 	}
 
-	return int(game.turn) * (p + blacks - whites)
+	return int(game.Turn) * (p + blacks - whites)
 }
 
 var SCORING = []int{

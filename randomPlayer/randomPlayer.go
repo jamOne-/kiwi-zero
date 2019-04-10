@@ -1,8 +1,10 @@
-package main
+package randomPlayer
 
 import (
 	"math/rand"
 	"time"
+
+	"github.com/jamOne-/kiwi-zero/game"
 )
 
 type RandomPlayer struct{}
@@ -12,7 +14,7 @@ func NewRandomPlayer() *RandomPlayer {
 	return &RandomPlayer{}
 }
 
-func (player *RandomPlayer) SelectMove(game *Game) Move {
-	possibleMoves := game.GetPossibleMoves()
+func (player *RandomPlayer) SelectMove(g game.Game) game.Move {
+	possibleMoves := g.GetPossibleMoves()
 	return possibleMoves[rand.Intn(len(possibleMoves))]
 }

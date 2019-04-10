@@ -1,72 +1,73 @@
-package main
+package reversi
 
-import "fmt"
+import (
+	"fmt"
 
-type PlayerColor = int8
-type Field = int8
-type Move = Field
+	"github.com/jamOne-/kiwi-zero/game"
+)
+
 type Game struct {
-	turn    PlayerColor
-	board   []Field
-	history []Move
+	Turn    game.PlayerColor
+	Board   []game.Field
+	History []game.Move
 }
 
 const BOARD_SIZE = 8
 const TOTAL_SIZE = BOARD_SIZE * BOARD_SIZE
-const EMPTY = Field(0)
-const WHITE = Field(-1)
-const BLACK = Field(1)
+const EMPTY = game.Field(0)
+const WHITE = game.Field(-1)
+const BLACK = game.Field(1)
 
-func getYX(field Field) (int8, int8) {
+func getYX(field game.Field) (int8, int8) {
 	return field / BOARD_SIZE, field % BOARD_SIZE
 }
 
-func yXToField(y int8, x int8) Field {
+func yXToField(y int8, x int8) game.Field {
 	return y*BOARD_SIZE + x
 }
 
 func NewGame() *Game {
 	turn := BLACK
-	board := make([]Field, TOTAL_SIZE)
-	history := make([]Move, 0, TOTAL_SIZE)
+	board := make([]game.Field, TOTAL_SIZE)
+	history := make([]game.Move, 0, TOTAL_SIZE)
 	board[yXToField(3, 3)], board[yXToField(4, 4)] = WHITE, WHITE
 	board[yXToField(3, 4)], board[yXToField(4, 3)] = BLACK, BLACK
 
 	return &Game{turn, board, history}
 }
 
-func (game *Game) Copy() *Game {
-	turn := game.turn
-	board := make([]Field, TOTAL_SIZE)
-	history := make([]Move, len(game.history), cap(game.history))
-	copy(board, game.board)
-	copy(history, game.history)
+func (g *Game) Copy() game.Game {
+	turn := g.Turn
+	board := make([]game.Field, TOTAL_SIZE)
+	history := make([]game.Move, len(g.History), cap(g.History))
+	copy(board, g.Board)
+	copy(history, g.History)
 
 	return &Game{turn, board, history}
 }
 
-func (game *Game) MakeMove(move Move) (bool, PlayerColor) {
-	currentPlayer := game.turn
-	game.turn *= -1
-	game.history = append(game.history, move)
+func (g *Game) MakeMove(move game.Move) (bool, game.PlayerColor) {
+	currentPlayer := g.Turn
+	g.Turn *= -1
+	g.History = append(g.History, move)
 
 	if move != -1 {
-		game.board[move] = currentPlayer
+		g.Board[move] = currentPlayer
 
-		for _, field := range getKilledPawns(game.board, move, currentPlayer) {
-			game.board[field] = currentPlayer
+		for _, field := range getKilledPawns(g.Board, move, currentPlayer) {
+			g.Board[field] = currentPlayer
 		}
 	}
 
-	return game.IsGameFinished()
+	return g.IsGameFinished()
 }
 
-func (game *Game) GetPossibleMoves() []Move {
-	result := make([]Field, 0, 8)
+func (g *Game) GetPossibleMoves() []game.Move {
+	result := make([]game.Field, 0, 8)
 	result = append(result, -1)
 
 	for field := int8(0); field < TOTAL_SIZE; field++ {
-		if game.board[field] == EMPTY && len(getKilledPawns(game.board, field, game.turn)) > 0 {
+		if g.Board[field] == EMPTY && len(getKilledPawns(g.Board, field, g.Turn)) > 0 {
 			result = append(result, field)
 		}
 	}
@@ -74,18 +75,22 @@ func (game *Game) GetPossibleMoves() []Move {
 	return result
 }
 
-func (game *Game) IsGameFinished() (bool, PlayerColor) {
-	turns := len(game.history)
-	if turns < 2 || game.history[turns-2] != -1 || game.history[turns-1] != -1 {
-		currentPlayerMoves := game.GetPossibleMoves()
+func (g *Game) GetCurrentPlayerColor() game.PlayerColor {
+	return g.Turn
+}
+
+func (g *Game) IsGameFinished() (bool, game.PlayerColor) {
+	turns := len(g.History)
+	if turns < 2 || g.History[turns-2] != -1 || g.History[turns-1] != -1 {
+		currentPlayerMoves := g.GetPossibleMoves()
 
 		if len(currentPlayerMoves) > 1 {
 			return false, EMPTY
 		}
 
-		game.turn *= -1
-		nextPlayerMoves := game.GetPossibleMoves()
-		game.turn *= -1
+		g.Turn *= -1
+		nextPlayerMoves := g.GetPossibleMoves()
+		g.Turn *= -1
 
 		if len(nextPlayerMoves) > 1 {
 			return false, EMPTY
@@ -94,7 +99,7 @@ func (game *Game) IsGameFinished() (bool, PlayerColor) {
 
 	// evaluating winner
 
-	blacks, whites := game.CountPawns()
+	blacks, whites := g.CountPawns()
 	winner := EMPTY
 
 	if blacks > whites {
@@ -110,7 +115,7 @@ func (game *Game) CountPawns() (int8, int8) {
 	black, white := int8(0), int8(0)
 
 	for field := 0; field < TOTAL_SIZE; field++ {
-		pawn := game.board[field]
+		pawn := game.Board[field]
 
 		if pawn == BLACK {
 			black++
@@ -122,9 +127,9 @@ func (game *Game) CountPawns() (int8, int8) {
 	return black, white
 }
 
-func getKilledPawns(board []Field, start Field, player PlayerColor) []Field {
+func getKilledPawns(board []game.Field, start game.Field, player game.PlayerColor) []game.Field {
 	opponent := player * -1
-	result := make([]Field, 0, 4)
+	result := make([]game.Field, 0, 4)
 	startY, startX := getYX(start)
 	deltas := []int8{-1, 0, 1}
 
@@ -134,7 +139,7 @@ func getKilledPawns(board []Field, start Field, player PlayerColor) []Field {
 				continue
 			}
 
-			candidates := make([]Field, 0, 4)
+			candidates := make([]game.Field, 0, 4)
 
 			for y, x := startY+dy, startX+dx; x >= 0 && x < BOARD_SIZE && y >= 0 && y < BOARD_SIZE; y, x = y+dy, x+dx {
 				field := yXToField(y, x)
@@ -159,7 +164,7 @@ func (game *Game) DrawBoard() {
 	output := ""
 
 	for field := 0; field < TOTAL_SIZE; field++ {
-		switch game.board[field] {
+		switch game.Board[field] {
 		case EMPTY:
 			output += "."
 		case BLACK:

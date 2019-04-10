@@ -1,9 +1,12 @@
-package main
+package monteCarloTreeSearchPlayer
 
 import (
 	"math"
 	"math/rand"
 	"time"
+
+	"github.com/jamOne-/kiwi-zero/game"
+	rp "github.com/jamOne-/kiwi-zero/randomPlayer"
 )
 
 type MonteCarloTreeSearchPlayer struct {
@@ -14,9 +17,9 @@ type node struct {
 	parent        *node
 	N             int
 	V             int
-	turn          int8
+	currentPlayer int8
 	childrenCount int8
-	moves         []Move
+	moves         []game.Move
 	nodes         []*node
 }
 
@@ -25,7 +28,7 @@ func NewMonteCarloTreeSearchPlayer(maxSimulations int) *MonteCarloTreeSearchPlay
 	return &MonteCarloTreeSearchPlayer{maxSimulations}
 }
 
-func (player *MonteCarloTreeSearchPlayer) SelectMove(game *Game) Move {
+func (player *MonteCarloTreeSearchPlayer) SelectMove(game game.Game) game.Move {
 	tree := newNode(game, nil)
 
 	for simulation := 0; simulation < player.maxSimulations; simulation += 1 {
@@ -53,14 +56,14 @@ func (player *MonteCarloTreeSearchPlayer) SelectMove(game *Game) Move {
 	return tree.moves[selectedIndex]
 }
 
-func newNode(game *Game, parent *node) *node {
+func newNode(game game.Game, parent *node) *node {
 	moves := game.GetPossibleMoves()
 	nodes := make([]*node, len(moves))
 
-	return &node{parent, 0, 0, game.turn, 0, moves, nodes}
+	return &node{parent, 0, 0, game.GetCurrentPlayerColor(), 0, moves, nodes}
 }
 
-func selectNode(game *Game, node *node) *node {
+func selectNode(game game.Game, node *node) *node {
 	if node.isLeaf() {
 		return node
 	}
@@ -98,7 +101,7 @@ func updateNs(node *node) {
 
 func updateVs(result int8, node *node) {
 	for node != nil {
-		node.V += int(node.turn * result)
+		node.V += int(node.currentPlayer * result)
 		node = node.parent
 	}
 }
@@ -107,7 +110,7 @@ func (node *node) isLeaf() bool {
 	return int(node.childrenCount) < len(node.moves)
 }
 
-func (node *node) expand(game *Game) *node {
+func (node *node) expand(game game.Game) *node {
 	possibilities := len(node.moves) - int(node.childrenCount)
 	selected := rand.Intn(possibilities) + 1
 
@@ -127,8 +130,8 @@ func (node *node) expand(game *Game) *node {
 	return createdNode
 }
 
-func randomSampleFromState(game *Game) int8 {
-	randomPlayer := NewRandomPlayer()
+func randomSampleFromState(game game.Game) int8 {
+	randomPlayer := rp.NewRandomPlayer()
 	finished, winner := false, int8(0)
 
 	for !finished {
