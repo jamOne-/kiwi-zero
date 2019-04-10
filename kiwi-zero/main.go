@@ -6,8 +6,8 @@ import (
 
 	"github.com/jamOne-/kiwi-zero/game"
 	"github.com/jamOne-/kiwi-zero/minMaxPlayer"
+	"github.com/jamOne-/kiwi-zero/monteCarloTreeSearchPlayer"
 	"github.com/jamOne-/kiwi-zero/reversi"
-	"github.com/jamOne-/kiwi-zero/threadedMonteCarloTreeSearchPlayer"
 )
 
 func main() {
@@ -16,7 +16,7 @@ func main() {
 
 	for gameNumber := 0; gameNumber < NUMBER_OF_GAMES; gameNumber += 1 {
 		g := reversi.NewGame()
-		player1 := threadedMonteCarloTreeSearchPlayer.NewThreadedMonteCarloTreeSearchPlayer(2000, 4)
+		player1 := monteCarloTreeSearchPlayer.NewThreadedMonteCarloTreeSearchPlayer(2000, 4)
 		player2 := minMaxPlayer.NewMinMaxPlayer(7)
 		// player2 := NewRandomPlayer()
 
