@@ -11,4 +11,5 @@ type Game interface {
 	GetCurrentPlayerColor() PlayerColor
 	IsGameFinished() (bool, PlayerColor)
 	DrawBoard()
+	SerializeBoard() string
 }

@@ -2,6 +2,8 @@ package reversi
 
 import (
 	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/jamOne-/kiwi-zero/game"
 )
@@ -185,4 +187,14 @@ func (game *Game) DrawBoard() {
 
 		fmt.Println(output[start : start+BOARD_SIZE])
 	}
+}
+
+func (game *Game) SerializeBoard() string {
+	stringsBoard := make([]string, len(game.Board))
+
+	for i, field := range game.Board {
+		stringsBoard[i] = strconv.Itoa(int(field))
+	}
+
+	return strings.Join(stringsBoard, " ")
 }
