@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -15,8 +16,9 @@ import (
 	"github.com/jamOne-/kiwi-zero/reversi"
 )
 
-var NUMBER_OF_POSITIONS = 1000
-var NUMBER_OF_SIMULATIONS = 100
+var NUMBER_OF_POSITIONS = 10000
+var NUMBER_OF_SIMULATIONS = 20000
+var AVERAGE_POSITION_NUMBER = 35
 
 func main() {
 	rand.Seed(time.Now().UnixNano())
@@ -36,10 +38,10 @@ func main() {
 
 		timeStart := time.Now()
 		game := reversi.NewGame()
-		player := monteCarloTreeSearchPlayer.NewThreadedMonteCarloTreeSearchPlayer(1000, 4)
+		player := monteCarloTreeSearchPlayer.NewThreadedMonteCarloTreeSearchPlayer(100, 1)
 		finished, _ := game.IsGameFinished()
 
-		for !finished && rand.Float64() > 1.0/35.0 {
+		for !finished && rand.Float64() > 1.0/float64(AVERAGE_POSITION_NUMBER) {
 			move := player.SelectMove(game)
 			finished, _ = game.MakeMove(move)
 		}
@@ -49,12 +51,12 @@ func main() {
 			continue
 		}
 
-		counter := 0
+		blackWins, draws, whiteWins := 0, 0, 0
 		var waitgroup sync.WaitGroup
 		resultChannel := make(chan int8)
-		go counterUpdater(resultChannel, &waitgroup, &counter)
+		go countersUpdater(resultChannel, &waitgroup, &blackWins, &draws, &whiteWins)
 
-		game.DrawBoard()
+		// game.DrawBoard()
 
 		for simulation := 0; simulation < NUMBER_OF_SIMULATIONS; simulation++ {
 			gameCopy := game.Copy()
@@ -65,15 +67,7 @@ func main() {
 		waitgroup.Wait()
 		close(resultChannel)
 
-		likelyWinner := 0
-		if counter > 0 {
-			likelyWinner = 1
-		} else {
-			likelyWinner = -1
-		}
-
-		fmt.Println(likelyWinner)
-		file.WriteString(game.SerializeBoard() + " " + string(likelyWinner))
+		file.WriteString(game.SerializeBoard() + " " + strconv.Itoa(blackWins) + " " + strconv.Itoa(draws) + " " + strconv.Itoa(whiteWins) + "\n")
 
 		timeDuration := time.Since(timeStart)
 		averageTime += (int(timeDuration) - averageTime) / (i + 1)
@@ -82,9 +76,16 @@ func main() {
 	file.Close()
 }
 
-func counterUpdater(resultChannel chan int8, waitgroup *sync.WaitGroup, counter *int) {
+func countersUpdater(resultChannel chan int8, waitgroup *sync.WaitGroup, blackWins *int, draws *int, whiteWins *int) {
 	for result := range resultChannel {
-		*counter = *counter + int(result)
+		if result == 1 {
+			*blackWins = *blackWins + 1
+		} else if result == 0 {
+			*draws = *draws + 1
+		} else {
+			*whiteWins = *whiteWins + 1
+		}
+
 		waitgroup.Done()
 	}
 }
