@@ -12,3 +12,5 @@
 *.out
 debug
 *.txt
+.ipynb_checkpoints
+python/saved_models/*/*
