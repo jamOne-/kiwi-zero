@@ -198,3 +198,26 @@ func (game *Game) SerializeBoard() string {
 
 	return strings.Join(stringsBoard, " ")
 }
+
+func (game *Game) OneHotBoard() [][][]int8 {
+	oneHotBoard := make([][][]int8, BOARD_SIZE)
+
+	for row := int8(0); row < BOARD_SIZE; row++ {
+		oneHotBoard[row] = make([][]int8, BOARD_SIZE)
+
+		for col := int8(0); col < BOARD_SIZE; col++ {
+			field := game.Board[yXToField(row, col)]
+
+			oneHotField := []int8{1, 0, 0}
+			if field == -1 {
+				oneHotField = []int8{0, 1, 0}
+			} else if field == 1 {
+				oneHotField = []int8{0, 0, 1}
+			}
+
+			oneHotBoard[row][col] = oneHotField
+		}
+	}
+
+	return oneHotBoard
+}

@@ -12,4 +12,5 @@ type Game interface {
 	IsGameFinished() (bool, PlayerColor)
 	DrawBoard()
 	SerializeBoard() string
+	OneHotBoard() [][][]int8
 }
