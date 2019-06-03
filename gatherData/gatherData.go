@@ -24,7 +24,7 @@ func main() {
 	rand.Seed(time.Now().UnixNano())
 	averageTime := 0
 
-	file, _ := os.Create(strings.ReplaceAll(time.Now().String()[:19], ":", "") + ".txt")
+	file, _ := os.Create(strings.Replace(time.Now().String()[:19], ":", "", -1) + ".txt")
 
 	for i := 0; i < NUMBER_OF_POSITIONS; i++ {
 		debugStep := NUMBER_OF_POSITIONS / 1000
