@@ -11,6 +11,8 @@ type MinMaxPlayer struct {
 	depth int
 }
 
+type HeuristicFn func(*reversi.Game) int
+
 func max(x int, y int) int {
 	if x >= y {
 		return x
@@ -24,17 +26,17 @@ func NewMinMaxPlayer(depth int) *MinMaxPlayer {
 }
 
 func (player *MinMaxPlayer) SelectMove(game *reversi.Game) game.Move {
-	_, move := negaMax(game, player.depth, -INFINITY, INFINITY)
+	_, move := negaMax(heuristicValueFunction, game, player.depth, -INFINITY, INFINITY)
 	return move
 }
 
-func negaMax(g *reversi.Game, depth int, a int, b int) (int, game.Move) {
+func negaMax(heuristicFn HeuristicFn, g *reversi.Game, depth int, a int, b int) (int, game.Move) {
 	if finished, winner := g.IsGameFinished(); finished {
 		return INFINITY * int(winner) * int(g.Turn), game.Move(-1)
 	}
 
 	if depth == 0 {
-		return heuristicValueFunction(g), game.Move(-1)
+		return heuristicFn(g), game.Move(-1)
 	}
 
 	moves := g.GetPossibleMoves()
@@ -44,7 +46,7 @@ func negaMax(g *reversi.Game, depth int, a int, b int) (int, game.Move) {
 		gameCopy := g.Copy().(*reversi.Game)
 		gameCopy.MakeMove(move)
 
-		value, _ := negaMax(gameCopy, depth-1, -b, -a)
+		value, _ := negaMax(heuristicFn, gameCopy, depth-1, -b, -a)
 		value = -value
 
 		if value > bestValue {

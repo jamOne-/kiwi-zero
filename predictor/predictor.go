@@ -1,10 +1,9 @@
-package main
+package predictor
 
 import (
 	"fmt"
 
 	"github.com/jamOne-/kiwi-zero/game"
-	"github.com/jamOne-/kiwi-zero/reversi"
 
 	tg "github.com/galeone/tfgo"
 	tf "github.com/tensorflow/tensorflow/tensorflow/go"
@@ -15,14 +14,6 @@ type Predictor struct {
 }
 
 var MODEL_PATH = "../python/saved_models/1559589871"
-
-func main() {
-	predictor := NewPredictor(MODEL_PATH)
-	game := reversi.NewGame()
-
-	prediction := predictor.PredictBlackWinProb(game)
-	fmt.Println(prediction)
-}
 
 func NewPredictor(path string) *Predictor {
 	return &Predictor{tg.LoadModel(path, []string{"eval"}, nil)}
@@ -46,3 +37,11 @@ func (predictor *Predictor) PredictBlackWinProb(game game.Game) float32 {
 	prediction := results[0].Value().([][]float32)[0][0]
 	return prediction
 }
+
+// func main() {
+// 	predictor := predictor.NewPredictor(MODEL_PATH)
+// 	game := reversi.NewGame()
+
+// 	prediction := predictor.PredictBlackWinProb(game)
+// 	fmt.Println(prediction)
+// }
