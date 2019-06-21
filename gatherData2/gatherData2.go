@@ -38,9 +38,9 @@ func main() {
 		game := reversi.NewGame()
 		player := mcts.NewThreadedMonteCarloTreeSearchPlayer(1000, 4)
 
-		boards := make([]string, 64)
-		probs := make([][]float64, 64)
-		turns := make([]int8, 64)
+		boards := make([]string, 70)
+		probs := make([][]float64, 70)
+		turns := make([]int8, 70)
 
 		finished, result := game.IsGameFinished()
 		for !finished {
@@ -50,15 +50,16 @@ func main() {
 
 			moveProbs := getMoveProbs(game, root)
 			board := game.SerializeBoard(game.Turn == reversi.WHITE)
+			turn := len(game.History)
 
-			boards = append(boards, board)
-			probs = append(probs, moveProbs)
-			turns = append(turns, game.Turn)
+			boards[turn] = board
+			probs[turn] = moveProbs
+			turns[turn] = game.Turn
 
 			finished, result = game.MakeMove(move)
 		}
 
-		index := rand.Intn(len(boards))
+		index := rand.Intn(len(game.History))
 
 		fmt.Fprintf(file, "%s ", boards[index])
 
