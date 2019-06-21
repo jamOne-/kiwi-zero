@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"math/rand"
 	"os"
@@ -12,10 +13,13 @@ import (
 	"github.com/jamOne-/kiwi-zero/reversi"
 )
 
-var NUMBER_OF_SIMULATIONS = 100000
-
 func main() {
 	rand.Seed(time.Now().UnixNano())
+	var simulationsFlag = flag.Int("simulations", 10000, "number of simulations")
+	flag.Parse()
+
+	var NUMBER_OF_SIMULATIONS = *simulationsFlag
+
 	averageTime := 0
 
 	file, _ := os.Create(strings.Replace(time.Now().String()[:19], ":", "", -1) + ".txt")
@@ -34,8 +38,9 @@ func main() {
 		game := reversi.NewGame()
 		player := mcts.NewThreadedMonteCarloTreeSearchPlayer(1000, 4)
 
-		boards := make([]string, 0, 64)
-		probs := make([][]float64, 0, 64)
+		boards := make([]string, 64)
+		probs := make([][]float64, 64)
+		turns := make([]int8, 64)
 
 		finished, result := game.IsGameFinished()
 		for !finished {
@@ -48,6 +53,7 @@ func main() {
 
 			boards = append(boards, board)
 			probs = append(probs, moveProbs)
+			turns = append(turns, game.Turn)
 
 			finished, result = game.MakeMove(move)
 		}
@@ -60,7 +66,7 @@ func main() {
 			fmt.Fprintf(file, "%.5f ", prob)
 		}
 
-		fmt.Fprintf(file, "%d\n", result)
+		fmt.Fprintf(file, "%d\n", result*turns[index])
 
 		timeDuration := time.Since(timeStart)
 		averageTime += (int(timeDuration) - averageTime) / (i + 1)
