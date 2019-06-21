@@ -67,7 +67,7 @@ func main() {
 		waitgroup.Wait()
 		close(resultChannel)
 
-		file.WriteString(game.SerializeBoard() + " " + strconv.Itoa(blackWins) + " " + strconv.Itoa(draws) + " " + strconv.Itoa(whiteWins) + "\n")
+		file.WriteString(game.SerializeBoard(false) + " " + strconv.Itoa(blackWins) + " " + strconv.Itoa(draws) + " " + strconv.Itoa(whiteWins) + "\n")
 
 		timeDuration := time.Since(timeStart)
 		averageTime += (int(timeDuration) - averageTime) / (i + 1)

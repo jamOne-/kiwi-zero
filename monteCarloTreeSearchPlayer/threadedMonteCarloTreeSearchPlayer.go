@@ -18,7 +18,16 @@ func NewThreadedMonteCarloTreeSearchPlayer(maxSimulations int, maxParallelGames 
 	return &ThreadedMonteCarloTreeSearchPlayer{maxSimulations, maxParallelGames}
 }
 
+type MoveAndRoot struct {
+	Move game.Move
+	Root *Node
+}
+
 func (player *ThreadedMonteCarloTreeSearchPlayer) SelectMove(game game.Game) game.Move {
+	return player.SelectMoveWithRoot(game).Move
+}
+
+func (player *ThreadedMonteCarloTreeSearchPlayer) SelectMoveWithRoot(game game.Game) *MoveAndRoot {
 	tree := newNode(game, nil)
 
 	var waitgroup sync.WaitGroup
@@ -43,7 +52,7 @@ func (player *ThreadedMonteCarloTreeSearchPlayer) SelectMove(game game.Game) gam
 	close(gamesChannel)
 
 	bestVisitCount, bestNodes := 0, make([]int, 0, 10)
-	for i, child := range tree.nodes {
+	for i, child := range tree.Nodes {
 		if child.N > bestVisitCount {
 			bestVisitCount = child.N
 			bestNodes = append(make([]int, 0, 10), i)
@@ -53,11 +62,11 @@ func (player *ThreadedMonteCarloTreeSearchPlayer) SelectMove(game game.Game) gam
 	}
 
 	selectedIndex := bestNodes[rand.Intn(len(bestNodes))]
-	return tree.moves[selectedIndex]
+	return &MoveAndRoot{tree.moves[selectedIndex], tree}
 }
 
 type resultTuple struct {
-	node   *node
+	node   *Node
 	result int8
 }
 
@@ -69,7 +78,7 @@ func vsUpdater(ch chan *resultTuple, waitgroup *sync.WaitGroup) {
 }
 
 type gameRequestTuple struct {
-	node *node
+	node *Node
 	game game.Game
 }
 
@@ -79,7 +88,7 @@ func gamesRequester(gameRequestsChannel chan *gameRequestTuple, resultChannel ch
 	}
 }
 
-func gamesPlayer(resultChannel chan *resultTuple, node *node, game game.Game) {
+func gamesPlayer(resultChannel chan *resultTuple, node *Node, game game.Game) {
 	result := randomSampleFromState(game)
 	resultChannel <- &resultTuple{node, result}
 }

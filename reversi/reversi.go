@@ -189,11 +189,15 @@ func (game *Game) DrawBoard() {
 	}
 }
 
-func (game *Game) SerializeBoard() string {
+func (game *Game) SerializeBoard(flipColors bool) string {
 	stringsBoard := make([]string, len(game.Board))
+	factor := 1
+	if flipColors {
+		factor = -1
+	}
 
 	for i, field := range game.Board {
-		stringsBoard[i] = strconv.Itoa(int(field))
+		stringsBoard[i] = strconv.Itoa(int(field) * factor)
 	}
 
 	return strings.Join(stringsBoard, " ")

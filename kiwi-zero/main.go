@@ -17,9 +17,9 @@ func main() {
 
 	for gameNumber := 0; gameNumber < NUMBER_OF_GAMES; gameNumber += 1 {
 		g := reversi.NewGame()
-		player1 := monteCarloTreeSearchPlayer.NewThreadedMonteCarloTreeSearchPlayer(2000, 4)
-		player2 := minMaxPlayer.NewPredictorMinMaxPlayer(4)
-		// player2 := minMaxPlayer.NewMinMaxPlayer(7)
+		player1 := monteCarloTreeSearchPlayer.NewThreadedMonteCarloTreeSearchPlayer(1000, 4)
+		// player2 := minMaxPlayer.NewPredictorMinMaxPlayer(4)
+		player2 := minMaxPlayer.NewMinMaxPlayer(7)
 		// player2 := randomPlayer.NewRandomPlayer()
 
 		// game.DrawBoard()

@@ -13,14 +13,14 @@ type MonteCarloTreeSearchPlayer struct {
 	maxSimulations int
 }
 
-type node struct {
-	parent        *node
+type Node struct {
+	parent        *Node
 	N             int
 	V             int
 	currentPlayer int8
 	childrenCount int8
 	moves         []game.Move
-	nodes         []*node
+	Nodes         []*Node
 }
 
 func NewMonteCarloTreeSearchPlayer(maxSimulations int) *MonteCarloTreeSearchPlayer {
@@ -43,7 +43,7 @@ func (player *MonteCarloTreeSearchPlayer) SelectMove(game game.Game) game.Move {
 	}
 
 	bestVisitCount, bestNodes := 0, make([]int, 0, 10)
-	for i, child := range tree.nodes {
+	for i, child := range tree.Nodes {
 		if child.N > bestVisitCount {
 			bestVisitCount = child.N
 			bestNodes = append(make([]int, 0, 10), i)
@@ -56,14 +56,14 @@ func (player *MonteCarloTreeSearchPlayer) SelectMove(game game.Game) game.Move {
 	return tree.moves[selectedIndex]
 }
 
-func newNode(game game.Game, parent *node) *node {
+func newNode(game game.Game, parent *Node) *Node {
 	moves := game.GetPossibleMoves()
-	nodes := make([]*node, len(moves))
+	nodes := make([]*Node, len(moves))
 
-	return &node{parent, 0, 0, game.GetCurrentPlayerColor(), 0, moves, nodes}
+	return &Node{parent, 0, 0, game.GetCurrentPlayerColor(), 0, moves, nodes}
 }
 
-func selectNode(game game.Game, node *node) *node {
+func selectNode(game game.Game, node *Node) *Node {
 	if node.isLeaf() {
 		return node
 	}
@@ -71,7 +71,7 @@ func selectNode(game game.Game, node *node) *node {
 	bestScore, bestNodes := -999999.0, make([]int, 0, 10)
 	C := 2.0
 
-	for i, child := range node.nodes {
+	for i, child := range node.Nodes {
 		v := float64(child.V)
 		n := float64(child.N)
 		N := float64(node.N)
@@ -89,34 +89,34 @@ func selectNode(game game.Game, node *node) *node {
 	selectedIndex := bestNodes[rand.Intn(len(bestNodes))]
 	game.MakeMove(node.moves[selectedIndex])
 
-	return selectNode(game, node.nodes[selectedIndex])
+	return selectNode(game, node.Nodes[selectedIndex])
 }
 
-func updateNs(node *node) {
+func updateNs(node *Node) {
 	for node != nil {
 		node.N += 1
 		node = node.parent
 	}
 }
 
-func updateVs(result int8, node *node) {
+func updateVs(result int8, node *Node) {
 	for node != nil {
 		node.V += int(node.currentPlayer * result)
 		node = node.parent
 	}
 }
 
-func (node *node) isLeaf() bool {
+func (node *Node) isLeaf() bool {
 	return int(node.childrenCount) < len(node.moves)
 }
 
-func (node *node) expand(game game.Game) *node {
+func (node *Node) expand(game game.Game) *Node {
 	possibilities := len(node.moves) - int(node.childrenCount)
 	selected := rand.Intn(possibilities) + 1
 
 	index := 0
 	for ; selected > 0; index += 1 {
-		if node.nodes[index] == nil {
+		if node.Nodes[index] == nil {
 			selected -= 1
 		}
 	}
@@ -124,7 +124,7 @@ func (node *node) expand(game game.Game) *node {
 
 	game.MakeMove(node.moves[index])
 	createdNode := newNode(game, node)
-	node.nodes[index] = createdNode
+	node.Nodes[index] = createdNode
 	node.childrenCount += 1
 
 	return createdNode
