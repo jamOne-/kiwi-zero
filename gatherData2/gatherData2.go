@@ -59,7 +59,7 @@ func main() {
 		turns := make([]int8, 100)
 		values := make([]float64, 100)
 
-		finished, _ := game.IsGameFinished()
+		finished, result := game.IsGameFinished()
 		for !finished {
 			moveRoot := player.SelectMoveWithRoot(game)
 			move := moveRoot.Move
@@ -78,7 +78,7 @@ func main() {
 			turns[turn] = game.Turn
 			values[turn] = float64(root.V) / float64(root.N)
 
-			finished, _ = game.MakeMove(move)
+			finished, result = game.MakeMove(move)
 		}
 
 		index := rand.Intn(len(game.History))
@@ -90,7 +90,8 @@ func main() {
 		}
 
 		fmt.Fprintf(file, "%.5f ", values[index])
-		fmt.Fprintf(file, "%d\n", turns[index])
+		fmt.Fprintf(file, "%d ", turns[index])
+		fmt.Fprintf(file, "%d\n", result)
 
 		timeDuration := time.Since(timeStart)
 		averageTime += (int(timeDuration) - averageTime) / (i + 1)
