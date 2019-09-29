@@ -1,52 +1,46 @@
 package minMaxPlayer
 
 import (
+	"math"
+
 	"github.com/jamOne-/kiwi-zero/game"
-	"github.com/jamOne-/kiwi-zero/reversi"
 )
 
-const INFINITY = 99999999
+const INFINITY = 99999999.0
+
+type ValueFn func(game.Game) float64
 
 type MinMaxPlayer struct {
-	depth int
+	depth   int
+	valueFn ValueFn
 }
 
-type HeuristicFn func(*reversi.Game) int
-
-func max(x int, y int) int {
-	if x >= y {
-		return x
-	} else {
-		return y
-	}
+func NewMinMaxPlayer(depth int, valueFn ValueFn) *MinMaxPlayer {
+	return &MinMaxPlayer{depth, valueFn}
 }
 
-func NewMinMaxPlayer(depth int) *MinMaxPlayer {
-	return &MinMaxPlayer{depth}
-}
-
-func (player *MinMaxPlayer) SelectMove(game *reversi.Game) game.Move {
-	_, move := negaMax(heuristicValueFunction, game, player.depth, -INFINITY, INFINITY)
+func (player *MinMaxPlayer) SelectMove(game game.Game) game.Move {
+	_, move := negaMax(player.valueFn, game, player.depth, -INFINITY, INFINITY)
 	return move
 }
 
-func negaMax(heuristicFn HeuristicFn, g *reversi.Game, depth int, a int, b int) (int, game.Move) {
+func negaMax(valueFn ValueFn, g game.Game, depth int, a float64, b float64) (float64, game.Move) {
 	if finished, winner := g.IsGameFinished(); finished {
-		return INFINITY * int(winner) * int(g.Turn), game.Move(-1)
+		return INFINITY * float64(winner*g.GetCurrentPlayerColor()), game.Move(-1)
 	}
 
 	if depth == 0 {
-		return heuristicFn(g), game.Move(-1)
+		return valueFn(g), game.Move(-1)
 	}
 
 	moves := g.GetPossibleMoves()
 	bestValue, bestMove := -INFINITY, game.Move(-1)
 
 	for _, move := range moves {
-		gameCopy := g.Copy().(*reversi.Game)
+		gameCopy := g.Copy()
 		gameCopy.MakeMove(move)
 
-		value, _ := negaMax(heuristicFn, gameCopy, depth-1, -b, -a)
+		value, _ := negaMax(valueFn, gameCopy, depth-1, -b, -a)
 		value = -value
 
 		if value > bestValue {
@@ -54,7 +48,7 @@ func negaMax(heuristicFn HeuristicFn, g *reversi.Game, depth int, a int, b int) 
 			bestMove = move
 		}
 
-		a = max(a, value)
+		a = math.Max(a, value)
 
 		if a >= b {
 			break
@@ -63,37 +57,3 @@ func negaMax(heuristicFn HeuristicFn, g *reversi.Game, depth int, a int, b int) 
 
 	return bestValue, bestMove
 }
-
-func heuristicValueFunction(game *reversi.Game) int {
-	blacks, whites := 0, 0
-	blackScore, whiteScore := 0, 0
-
-	for i, pawn := range game.Board {
-		if pawn == reversi.BLACK {
-			blacks += 1
-			blackScore += SCORING[i]
-		} else if pawn == reversi.WHITE {
-			whites += 1
-			whiteScore += SCORING[i]
-		}
-	}
-
-	p := 0
-	if blacks > whites {
-		p = 100.0 * blacks / (blacks + whites)
-	} else if blacks < whites {
-		p = -100.0 * whites / (blacks + whites)
-	}
-
-	return int(game.Turn) * (p + blacks - whites)
-}
-
-var SCORING = []int{
-	20, -3, 11, 8, 8, 11, -3, 20,
-	-3, -7, -4, 1, 1, -4, -7, -3,
-	11, -4, 2, 2, 2, 2, -4, 11,
-	8, 1, 2, -3, -3, 2, 1, 8,
-	8, 1, 2, -3, -3, 2, 1, 8,
-	11, -4, 2, 2, 2, 2, -4, 11,
-	-3, -7, -4, 1, 1, -4, -7, -3,
-	20, -3, 11, 8, 8, 11, -3, 20}

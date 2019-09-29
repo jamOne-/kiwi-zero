@@ -14,3 +14,6 @@ type Game interface {
 	SerializeBoard(flipColors bool) string
 	OneHotBoard() [][][]float32
 }
+
+const WHITE = PlayerColor(-1)
+const BLACK = PlayerColor(1)

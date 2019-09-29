@@ -13,10 +13,10 @@ func NewHumanPlayer() *HumanPlayer {
 }
 
 func (player *HumanPlayer) SelectMove(g game.Game) game.Move {
-	var move int
+	var move game.Move
 
 	fmt.Println(g.GetPossibleMoves())
 	fmt.Scan(&move)
 
-	return int8(move)
+	return move
 }
