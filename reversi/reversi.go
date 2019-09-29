@@ -8,7 +8,7 @@ import (
 	"github.com/jamOne-/kiwi-zero/game"
 )
 
-type Game struct {
+type ReversiGame struct {
 	Turn    game.PlayerColor
 	Board   []game.Field
 	History []game.Move
@@ -28,48 +28,48 @@ func yXToField(y int8, x int8) game.Field {
 	return y*BOARD_SIZE + x
 }
 
-func NewGame() *Game {
+func NewReversiGame() *ReversiGame {
 	turn := BLACK
 	board := make([]game.Field, TOTAL_SIZE)
 	history := make([]game.Move, 0, TOTAL_SIZE)
 	board[yXToField(3, 3)], board[yXToField(4, 4)] = WHITE, WHITE
 	board[yXToField(3, 4)], board[yXToField(4, 3)] = BLACK, BLACK
 
-	return &Game{turn, board, history}
+	return &ReversiGame{turn, board, history}
 }
 
-func (g *Game) Copy() game.Game {
-	turn := g.Turn
+func (reversiGame *ReversiGame) Copy() game.Game {
+	turn := reversiGame.Turn
 	board := make([]game.Field, TOTAL_SIZE)
-	history := make([]game.Move, len(g.History), cap(g.History))
-	copy(board, g.Board)
-	copy(history, g.History)
+	history := make([]game.Move, len(reversiGame.History), cap(reversiGame.History))
+	copy(board, reversiGame.Board)
+	copy(history, reversiGame.History)
 
-	return &Game{turn, board, history}
+	return &ReversiGame{turn, board, history}
 }
 
-func (g *Game) MakeMove(move game.Move) (bool, game.PlayerColor) {
-	currentPlayer := g.Turn
-	g.Turn *= -1
-	g.History = append(g.History, move)
+func (reversiGame *ReversiGame) MakeMove(move game.Move) (bool, game.PlayerColor) {
+	currentPlayer := reversiGame.Turn
+	reversiGame.Turn *= -1
+	reversiGame.History = append(reversiGame.History, move)
 
 	if move != -1 {
-		g.Board[move] = currentPlayer
+		reversiGame.Board[move] = currentPlayer
 
-		for _, field := range getKilledPawns(g.Board, move, currentPlayer) {
-			g.Board[field] = currentPlayer
+		for _, field := range getKilledPawns(reversiGame.Board, move, currentPlayer) {
+			reversiGame.Board[field] = currentPlayer
 		}
 	}
 
-	return g.IsGameFinished()
+	return reversiGame.IsGameFinished()
 }
 
-func (g *Game) GetPossibleMoves() []game.Move {
+func (reversiGame *ReversiGame) GetPossibleMoves() []game.Move {
 	result := make([]game.Field, 0, 8)
 	result = append(result, -1)
 
 	for field := int8(0); field < TOTAL_SIZE; field++ {
-		if g.Board[field] == EMPTY && len(getKilledPawns(g.Board, field, g.Turn)) > 0 {
+		if reversiGame.Board[field] == EMPTY && len(getKilledPawns(reversiGame.Board, field, reversiGame.Turn)) > 0 {
 			result = append(result, field)
 		}
 	}
@@ -77,22 +77,22 @@ func (g *Game) GetPossibleMoves() []game.Move {
 	return result
 }
 
-func (g *Game) GetCurrentPlayerColor() game.PlayerColor {
-	return g.Turn
+func (reversiGame *ReversiGame) GetCurrentPlayerColor() game.PlayerColor {
+	return reversiGame.Turn
 }
 
-func (g *Game) IsGameFinished() (bool, game.PlayerColor) {
-	turns := len(g.History)
-	if turns < 2 || g.History[turns-2] != -1 || g.History[turns-1] != -1 {
-		currentPlayerMoves := g.GetPossibleMoves()
+func (reversiGame *ReversiGame) IsGameFinished() (bool, game.PlayerColor) {
+	turns := len(reversiGame.History)
+	if turns < 2 || reversiGame.History[turns-2] != -1 || reversiGame.History[turns-1] != -1 {
+		currentPlayerMoves := reversiGame.GetPossibleMoves()
 
 		if len(currentPlayerMoves) > 1 {
 			return false, EMPTY
 		}
 
-		g.Turn *= -1
-		nextPlayerMoves := g.GetPossibleMoves()
-		g.Turn *= -1
+		reversiGame.Turn *= -1
+		nextPlayerMoves := reversiGame.GetPossibleMoves()
+		reversiGame.Turn *= -1
 
 		if len(nextPlayerMoves) > 1 {
 			return false, EMPTY
@@ -101,7 +101,7 @@ func (g *Game) IsGameFinished() (bool, game.PlayerColor) {
 
 	// evaluating winner
 
-	blacks, whites := g.CountPawns()
+	blacks, whites := reversiGame.CountPawns()
 	winner := EMPTY
 
 	if blacks > whites {
@@ -113,11 +113,11 @@ func (g *Game) IsGameFinished() (bool, game.PlayerColor) {
 	return true, winner
 }
 
-func (game *Game) CountPawns() (int8, int8) {
+func (reversiGame *ReversiGame) CountPawns() (int8, int8) {
 	black, white := int8(0), int8(0)
 
 	for field := 0; field < TOTAL_SIZE; field++ {
-		pawn := game.Board[field]
+		pawn := reversiGame.Board[field]
 
 		if pawn == BLACK {
 			black++
@@ -162,7 +162,7 @@ func getKilledPawns(board []game.Field, start game.Field, player game.PlayerColo
 	return result
 }
 
-func (game *Game) DrawBoard() {
+func (game *ReversiGame) DrawBoard() {
 	output := ""
 
 	for field := 0; field < TOTAL_SIZE; field++ {
@@ -189,7 +189,7 @@ func (game *Game) DrawBoard() {
 	}
 }
 
-func (game *Game) SerializeBoard(flipColors bool) string {
+func (game *ReversiGame) SerializeBoard(flipColors bool) string {
 	stringsBoard := make([]string, len(game.Board))
 	factor := 1
 	if flipColors {
@@ -203,7 +203,7 @@ func (game *Game) SerializeBoard(flipColors bool) string {
 	return strings.Join(stringsBoard, " ")
 }
 
-func (game *Game) OneHotBoard() [][][]float32 {
+func (game *ReversiGame) OneHotBoard() [][][]float32 {
 	oneHotBoard := make([][][]float32, BOARD_SIZE)
 
 	for row := int8(0); row < BOARD_SIZE; row++ {
