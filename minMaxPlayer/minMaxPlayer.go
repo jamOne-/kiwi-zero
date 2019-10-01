@@ -30,7 +30,7 @@ func negaMax(valueFn ValueFn, g game.Game, depth int, a float64, b float64) (flo
 	}
 
 	if depth == 0 {
-		return valueFn(g), game.Move(-1)
+		return float64(g.GetCurrentPlayerColor()) * valueFn(g), game.Move(-1)
 	}
 
 	moves := g.GetPossibleMoves()

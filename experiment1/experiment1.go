@@ -58,7 +58,7 @@ func simpleReversiValueFn(game game.Game) float64 {
 		p = -100.0 * whites / (blacks + whites)
 	}
 
-	return float64(game.GetCurrentPlayerColor()) * (p + blacks - whites)
+	return p + blacks - whites
 }
 
 var SCORING = []float64{
