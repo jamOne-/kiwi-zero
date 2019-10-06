@@ -1,127 +1,127 @@
 package sgd
 
-type struct OptimizeFnRet {
-	value float64
-	gradients []float64
+import (
+	"fmt"
+	"math"
+	"math/rand"
+	"time"
+
+	"gonum.org/v1/gonum/mat"
+
+	"github.com/jamOne-/kiwi-zero/utils"
+)
+
+type OptimizeFn func(Xs [][]float64, ys []float64, weights *mat.VecDense) (float64, *mat.VecDense)
+type SGDReturn struct {
+	bestWeights             *mat.VecDense
+	testSetErrorRate        float64
+	bestValidErrorRate      float64
+	totalEpochs             int
+	bestWeightsEpoch        int
+	trainErrorsHistory      []float64
+	validationErrorsHistory []float64
 }
 
-type OptimizeFn func(Xs [][]float64, ys []float64, weights []float64) OptimizeFnRet
+var DEFAULT_PARAMETERS = map[string]float64{
+	"alpha0":               1e-4,
+	"alpha_const":          1e-5,
+	"batch_size":           32,
+	"momentum":             0.9,
+	"epochs":               50.0,
+	"max_epochs":           1000.0,
+	"patience_expansion":   1.5,
+	"validation_set_ratio": 0.2,
+	"test_set_ratio":       0.2,
+	"weights_decay":        0.0,
+	"debug":                1}
 
-func SGD(f )
+func SGD(f OptimizeFn, weights *mat.VecDense, Xs [][]float64, ys []float64, parameters map[string]float64) *SGDReturn {
+	parameters = utils.MergeMaps(DEFAULT_PARAMETERS, parameters)
+	alpha0, alphaConst := parameters["alpha0"], parameters["alpha_const"]
+	batchSize := int(parameters["batch_size"])
+	momentum := parameters["momentum"]
+	numberOfEpochs := int(parameters["epochs"])
+	maxEpochs := int(parameters["max_epochs"])
+	patienceExpansion := parameters["patience_expansion"]
+	// weightsDecay := parameters["weightsDecay"]
 
-/*
+	i := 0
+	epoch := 0
+	velocities := mat.NewVecDense(weights.Len(), nil)
 
-def SGD(net, train_stream, validation_stream, test_stream,
-       weight_decay_const=5e-4,
-       alpha0=2e-2,
-       alpha_const=9e-5,
-       epsilon=0.9):
-    i=0
-    e=0
-    
-    velocities = [np.zeros_like(P) for P in net.parameters]
-    
-    best_valid_error_rate = np.inf
-    best_params = deepcopy(net.parameters)
-    best_params_epoch = 0
-    
-    train_erros = []
-    train_loss = []
-    validation_errors = []
-    
-    number_of_epochs = 50
-    patience_expansion = 1.5
-    
-    try:
-        while e < number_of_epochs: #This loop goes over epochs
-            e += 1
-            #First train on all data from this batch
-            for X,Y in train_stream.get_epoch_iterator(): 
-                i += 1
-                L, O, gradients = net.get_cost_and_gradient(X, Y)
-                err_rate = (O.argmax(0) != Y).mean()
-                train_loss.append((i,L))
-                train_erros.append((i,err_rate))
-                if i % 100 == 0:
-                    print("At minibatch %d, batch loss %f, batch error rate %f%%" % (i, L, err_rate*100))
-                for P, V, G, N in zip(net.parameters, velocities, gradients, net.parameter_names):
-                    if N=='W':
-                        # weight_decay_const = 5e-4
-                        G += weight_decay_const * P
-                    
-                    # alpha0 = 2e-2
-                    # alpha_const = 9e-5
-                    alpha = alpha0 / (1 + alpha_const * i)
-                    
-                    # epsilon = 0.9
-                    epsilon = 0.9
-                    
-                    V *= epsilon
-                    V += alpha * G
-                    
-                    P -= V
-            # After an epoch compute validation error
-            val_error_rate = compute_error_rate(net, validation_stream)
-            if val_error_rate < best_valid_error_rate:
-                number_of_epochs = np.maximum(number_of_epochs, e * patience_expansion + 1)
-                best_valid_error_rate = val_error_rate
-                best_params = deepcopy(net.parameters)
-                best_params_epoch = e
-                validation_errors.append((i,val_error_rate))
-            print("After epoch %d: valid_err_rate: %f%% currently going to do %d epochs" % (e, val_error_rate * 100, number_of_epochs))
-       epsilon=0.9):
-    i=0
-    e=0
-    
-    velocities = [np.zeros_like(P) for P in net.parameters]
-    
-    best_valid_error_rate = np.inf
-    best_params = deepcopy(net.parameters)
-    best_params_epoch = 0
-    
-    train_erros = []
-    train_loss = []
-    validation_errors = []
-    
-    number_of_epochs = 50
-    patience_expansion = 1.5
-    
-    try:
-        while e < number_of_epochs: #This loop goes over epochs
-            e += 1
-            #First train on all data from this batch
-            for X,Y in train_stream.get_epoch_iterator(): 
-                i += 1
-                L, O, gradients = net.get_cost_and_gradient(X, Y)
-                err_rate = (O.argmax(0) != Y).mean()
-                train_loss.append((i,L))
-                train_erros.append((i,err_rate))
-                if i % 100 == 0:
-                    print("At minibatch %d, batch loss %f, batch error rate %f%%" % (i, L, err_rate*100))
-                for P, V, G, N in zip(net.parameters, velocities, gradients, net.parameter_names):
-                    if N=='W':
-                        # weight_decay_const = 5e-4
-                        G += weight_decay_const * P
-                    
-                    # alpha0 = 2e-2
-                    # alpha_const = 9e-5
-                    alpha = alpha0 / (1 + alpha_const * i)
-                    
-                    # epsilon = 0.9
-                    epsilon = 0.9
-                    
-                    V *= epsilon
-                    V += alpha * G
-                    
-                    P -= V
-            # After an epoch compute validation error
-            val_error_rate = compute_error_rate(net, validation_stream)
-            if val_error_rate < best_valid_error_rate:
-                number_of_epochs = np.maximum(number_of_epochs, e * patience_expansion + 1)
-                best_valid_error_rate = val_error_rate
-                best_params = deepcopy(net.parameters)
-                best_params_epoch = e
-                validation_errors.append((i,val_error_rate))
-            print("After epoch %d: valid_err_rate: %f%% currently going to do %d epochs" % (e, val_error_rate * 100, number_of_epochs))
+	bestValidErrorRate := math.MaxFloat64
+	bestWeights := mat.NewVecDense(weights.Len(), nil)
+	bestWeights.CloneVec(weights)
+	bestWeightsEpoch := 0
 
-*/
+	trainErrors := make([]float64, 0)
+	// trainLoss := make([]float64, 0)
+	validationErrors := make([]float64, 0)
+
+	rand.Seed(time.Now().UnixNano())
+	rand.Shuffle(len(Xs), func(i int, j int) {
+		Xs[i], Xs[j] = Xs[j], Xs[i]
+		ys[i], ys[j] = ys[j], ys[i]
+	})
+
+	testSetSize := int(math.Floor(parameters["test_set_ratio"] * float64(len(Xs))))
+	testX, testy := Xs[:testSetSize], ys[:testSetSize]
+	restX, resty := Xs[testSetSize:], ys[testSetSize:]
+	validationSetSize := int(math.Floor(parameters["validation_set_ratio"] * float64(len(restX))))
+	validationX, validationy := restX[:validationSetSize], resty[:validationSetSize]
+	trainX, trainy := restX[validationSetSize:], resty[validationSetSize:]
+	debugMode := int(parameters["debug"]) == 1
+
+	numberOfBatches := int(math.Ceil(float64(len(trainX)) / float64(batchSize)))
+
+	for epoch < numberOfEpochs {
+		epoch += 1
+
+		for batchIndex := 0; batchIndex < numberOfBatches; batchIndex++ {
+			i += 1
+
+			batchStart := batchIndex * batchSize
+			batchEnd := int(math.Min(float64(batchStart+batchSize), float64(len(trainX))))
+			batchX, batchy := trainX[batchStart:batchEnd], trainy[batchStart:batchEnd]
+
+			errorRate, gradient := f(batchX, batchy, weights)
+			trainErrors = append(trainErrors, errorRate)
+
+			alpha := alpha0 / (1.0 + alphaConst*float64(i))
+			velocities.ScaleVec(momentum, velocities)
+			velocities.AddScaledVec(velocities, alpha, gradient)
+
+			weights.SubVec(weights, velocities)
+		}
+
+		validationError, _ := f(validationX, validationy, weights)
+		validationErrors = append(validationErrors, validationError)
+
+		if validationError < bestValidErrorRate {
+			numberOfEpochs = int(math.Max(float64(numberOfEpochs), float64(epoch)*patienceExpansion+1.0))
+			numberOfEpochs = int(math.Min(float64(maxEpochs), float64(numberOfEpochs)))
+			bestValidErrorRate = validationError
+			bestWeights.CloneVec(weights)
+			bestWeightsEpoch = epoch
+		}
+
+		if debugMode {
+			fmt.Printf("After epoch %d: validationError: %f currently going to do %d epochs\n", epoch, validationError, numberOfEpochs)
+		}
+	}
+
+	testErrorRate, _ := f(testX, testy, bestWeights)
+
+	if debugMode {
+		fmt.Printf("SGD ended after %d epochs having %f error on test set\n", numberOfEpochs, testErrorRate)
+	}
+
+	return &SGDReturn{
+		bestWeights,
+		testErrorRate,
+		bestValidErrorRate,
+		numberOfEpochs,
+		bestWeightsEpoch,
+		trainErrors,
+		validationErrors}
+}
