@@ -1,31 +1,28 @@
 package main
 
 import (
+	"gonum.org/v1/gonum/mat"
+
 	"github.com/jamOne-/kiwi-zero/game"
 	"github.com/jamOne-/kiwi-zero/minMaxPlayer"
 	"github.com/jamOne-/kiwi-zero/reversi"
+	"github.com/jamOne-/kiwi-zero/utils"
 )
 
-func createWeightedReversiFn(weights []float64) minMaxPlayer.ValueFn {
+func createWeightedReversiFn(weights *mat.VecDense) minMaxPlayer.ValueFn {
 	return func(g game.Game) float64 {
 		reversiGame := g.(*reversi.ReversiGame) // nieładnie, ale brak generyków to jest jakiś dramat
-		blacks, whites := 0, 0
+		board := utils.Int8SliceToVecDense(reversiGame.Board)
 		totalScore := 0.0
 
-		for i, pawn := range reversiGame.Board {
-			if pawn == reversi.BLACK {
-				blacks += 1
-				totalScore += weights[i]
-			} else if pawn == reversi.WHITE {
-				whites += 1
-				totalScore -= weights[i]
-			}
-		}
+		countWeight := weights.AtVec(64)
+		countDifference := mat.Sum(board)
+		totalScore += countWeight * countDifference
 
-		countWeight := weights[64]
-		totalScore += countWeight * float64(blacks-whites)
+		weightedPositions := mat.Dot(board, weights.SliceVec(0, 64))
+		totalScore += weightedPositions
 
-		mobilityWeight := weights[65]
+		mobilityWeight := weights.AtVec(64)
 		currentPlayer := reversiGame.GetCurrentPlayerColor()
 		reversiGame.Turn = game.BLACK
 		blackMobility := len(reversiGame.GetPossibleMoves())
@@ -38,7 +35,7 @@ func createWeightedReversiFn(weights []float64) minMaxPlayer.ValueFn {
 	}
 }
 
-func getInitialWeights() []float64 {
+func getInitialWeights() *mat.VecDense {
 	weightsLength := 8*8 + 2 // fields + countWeight + mobilityWeight
 	weights := make([]float64, weightsLength)
 
@@ -46,5 +43,5 @@ func getInitialWeights() []float64 {
 		weights[i] = 1
 	}
 
-	return weights
+	return mat.NewVecDense(weightsLength, weights)
 }
