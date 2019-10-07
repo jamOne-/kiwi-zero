@@ -2,6 +2,7 @@ package minMaxPlayer
 
 import (
 	"math"
+	"math/rand"
 
 	"github.com/jamOne-/kiwi-zero/game"
 )
@@ -34,7 +35,7 @@ func negaMax(valueFn ValueFn, g game.Game, depth int, a float64, b float64) (flo
 	}
 
 	moves := g.GetPossibleMoves()
-	bestValue, bestMove := -INFINITY, game.Move(-1)
+	bestValue, bestMoves := -INFINITY, []game.Move{game.Move(-1)}
 
 	for _, move := range moves {
 		gameCopy := g.Copy()
@@ -45,7 +46,9 @@ func negaMax(valueFn ValueFn, g game.Game, depth int, a float64, b float64) (flo
 
 		if value > bestValue {
 			bestValue = value
-			bestMove = move
+			bestMoves = []game.Move{move}
+		} else if value == bestValue {
+			bestMoves = append(bestMoves, move)
 		}
 
 		a = math.Max(a, value)
@@ -55,5 +58,7 @@ func negaMax(valueFn ValueFn, g game.Game, depth int, a float64, b float64) (flo
 		}
 	}
 
+	bestMoveIndex := rand.Intn(len(bestMoves))
+	bestMove := bestMoves[bestMoveIndex]
 	return bestValue, bestMove
 }
