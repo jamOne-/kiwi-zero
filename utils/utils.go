@@ -1,6 +1,12 @@
 package utils
 
-import "gonum.org/v1/gonum/mat"
+import (
+	"fmt"
+	"os"
+
+	"github.com/jamOne-/kiwi-zero/runner"
+	"gonum.org/v1/gonum/mat"
+)
 
 func Int8SliceToVecDense(xs []int8) *mat.VecDense {
 	n := len(xs)
@@ -25,4 +31,23 @@ func MergeMaps(m1 map[string]float64, m2 map[string]float64) map[string]float64 
 	}
 
 	return resultMap
+}
+
+func SaveGameResultsToFile(gameResults []*runner.GameResult, fileName string) {
+	file, _ := os.Create(fileName)
+	defer file.Close()
+
+	for _, result := range gameResults {
+		historyLength := len(result.History)
+		winner := result.Winner
+
+		fmt.Fprintf(file, "%d %d\n", winner, historyLength)
+
+		for _, state := range result.History {
+			currentPlayer := state.GetCurrentPlayerColor()
+			board := state.SerializeBoard(false)
+
+			fmt.Fprintf(file, "%d %s\n", currentPlayer, board)
+		}
+	}
 }
