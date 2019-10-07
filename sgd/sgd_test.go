@@ -8,7 +8,9 @@ import (
 )
 
 func TestMeanSquaredError(t *testing.T) {
-	Xs := [][]float64{[]float64{1, 2, 3}, []float64{4, 5, 6}}
+	Xs := []*mat.VecDense{
+		mat.NewVecDense(3, []float64{1, 2, 3}),
+		mat.NewVecDense(3, []float64{4, 5, 6})}
 	weights := mat.NewVecDense(3, []float64{3, 2, 1})
 	ys := []float64{5, 10}
 
@@ -29,15 +31,15 @@ func TestMeanSquaredError(t *testing.T) {
 }
 
 func TestSGDSimple(t *testing.T) {
-	Xs := [][]float64{
-		[]float64{1, 10},
-		[]float64{1, 0},
-		[]float64{1, 100},
-		[]float64{1, 2},
-		[]float64{1, 4},
-		[]float64{1, -8},
-		[]float64{1, 0},
-		[]float64{1, 0}}
+	Xs := []*mat.VecDense{
+		mat.NewVecDense(2, []float64{1, 10}),
+		mat.NewVecDense(2, []float64{1, 0}),
+		mat.NewVecDense(2, []float64{1, 100}),
+		mat.NewVecDense(2, []float64{1, 2}),
+		mat.NewVecDense(2, []float64{1, 4}),
+		mat.NewVecDense(2, []float64{1, -8}),
+		mat.NewVecDense(2, []float64{1, 0}),
+		mat.NewVecDense(2, []float64{1, 0})}
 
 	ys := []float64{57, 7, 507, 17, 27, -47, 7, 7}
 	initialWeights := []float64{0, 0}
@@ -50,7 +52,7 @@ func TestSGDSimple(t *testing.T) {
 		"max_epochs": 1000,
 		"debug":      0})
 
-	weights := sgdReturn.bestWeights.RawVector().Data
+	weights := sgdReturn.BestWeights.RawVector().Data
 	// assert.Equal(t, []float64{7, 5}, sgdReturn.bestWeights.RawVector().Data)
 	assert.Greater(t, weights[1], 4.8)
 	assert.Less(t, weights[1], 5.2)

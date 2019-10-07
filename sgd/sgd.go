@@ -4,22 +4,21 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
-	"time"
 
 	"gonum.org/v1/gonum/mat"
 
 	"github.com/jamOne-/kiwi-zero/utils"
 )
 
-type OptimizeFn func(Xs [][]float64, ys []float64, weights *mat.VecDense) (float64, *mat.VecDense)
+type OptimizeFn func(Xs []*mat.VecDense, ys []float64, weights *mat.VecDense) (float64, *mat.VecDense)
 type SGDReturn struct {
-	bestWeights             *mat.VecDense
-	testSetErrorRate        float64
-	bestValidErrorRate      float64
-	totalEpochs             int
-	bestWeightsEpoch        int
-	trainErrorsHistory      []float64
-	validationErrorsHistory []float64
+	BestWeights             *mat.VecDense
+	TestSetErrorRate        float64
+	BestValidErrorRate      float64
+	TotalEpochs             int
+	BestWeightsEpoch        int
+	TrainErrorsHistory      []float64
+	ValidationErrorsHistory []float64
 }
 
 var DEFAULT_PARAMETERS = map[string]float64{
@@ -28,14 +27,14 @@ var DEFAULT_PARAMETERS = map[string]float64{
 	"batch_size":           32,
 	"momentum":             0.9,
 	"epochs":               50.0,
-	"max_epochs":           1000.0,
+	"max_epochs":           20000.0,
 	"patience_expansion":   1.5,
 	"validation_set_ratio": 0.2,
 	"test_set_ratio":       0.2,
 	"weights_decay":        0.0,
 	"debug":                1}
 
-func SGD(f OptimizeFn, weights *mat.VecDense, Xs [][]float64, ys []float64, parameters map[string]float64) *SGDReturn {
+func SGD(f OptimizeFn, weights *mat.VecDense, Xs []*mat.VecDense, ys []float64, parameters map[string]float64) *SGDReturn {
 	parameters = utils.MergeMaps(DEFAULT_PARAMETERS, parameters)
 	alpha0, alphaConst := parameters["alpha0"], parameters["alpha_const"]
 	batchSize := int(parameters["batch_size"])
@@ -58,7 +57,6 @@ func SGD(f OptimizeFn, weights *mat.VecDense, Xs [][]float64, ys []float64, para
 	// trainLoss := make([]float64, 0)
 	validationErrors := make([]float64, 0)
 
-	rand.Seed(time.Now().UnixNano())
 	rand.Shuffle(len(Xs), func(i int, j int) {
 		Xs[i], Xs[j] = Xs[j], Xs[i]
 		ys[i], ys[j] = ys[j], ys[i]

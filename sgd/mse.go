@@ -4,12 +4,12 @@ import (
 	"gonum.org/v1/gonum/mat"
 )
 
-func MeanSquaredErrorWithGradient(Xs [][]float64, ys []float64, weights *mat.VecDense) (float64, *mat.VecDense) {
-	rows, cols := len(Xs), len(Xs[0])
+func MeanSquaredErrorWithGradient(Xs []*mat.VecDense, ys []float64, weights *mat.VecDense) (float64, *mat.VecDense) {
+	rows, cols := len(Xs), Xs[0].Len()
 	X := mat.NewDense(rows, cols, nil)
 
 	for row := 0; row < rows; row++ {
-		X.SetRow(row, Xs[row])
+		X.SetRow(row, Xs[row].RawVector().Data)
 	}
 
 	Y := mat.NewVecDense(rows, ys)
