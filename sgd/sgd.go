@@ -48,6 +48,10 @@ func SGD(f OptimizeFn, weights *mat.VecDense, Xs []*mat.VecDense, ys []float64, 
 	epoch := 0
 	velocities := mat.NewVecDense(weights.Len(), nil)
 
+	weightsAux := mat.NewVecDense(weights.Len(), nil)
+	weightsAux.CloneVec(weights)
+	weights = weightsAux
+
 	bestValidErrorRate := math.MaxFloat64
 	bestWeights := mat.NewVecDense(weights.Len(), nil)
 	bestWeights.CloneVec(weights)
