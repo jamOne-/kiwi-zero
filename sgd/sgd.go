@@ -72,7 +72,7 @@ func SGD(f OptimizeFn, weights *mat.VecDense, Xs []*mat.VecDense, ys []float64, 
 	validationSetSize := int(math.Floor(parameters["validation_set_ratio"] * float64(len(restX))))
 	validationX, validationy := restX[:validationSetSize], resty[:validationSetSize]
 	trainX, trainy := restX[validationSetSize:], resty[validationSetSize:]
-	debugMode := int(parameters["debug"]) == 1
+	debugMode := parameters["debug"]
 
 	numberOfBatches := int(math.Ceil(float64(len(trainX)) / float64(batchSize)))
 
@@ -88,6 +88,10 @@ func SGD(f OptimizeFn, weights *mat.VecDense, Xs []*mat.VecDense, ys []float64, 
 
 			errorRate, gradient := f(batchX, batchy, weights)
 			trainErrors = append(trainErrors, errorRate)
+
+			if debugMode >= 3 && i%100 == 0 {
+				fmt.Printf("After batch %d: errorRate: %f\n", i, errorRate)
+			}
 
 			alpha := alpha0 / (1.0 + alphaConst*float64(i))
 			velocities.ScaleVec(momentum, velocities)
@@ -107,14 +111,14 @@ func SGD(f OptimizeFn, weights *mat.VecDense, Xs []*mat.VecDense, ys []float64, 
 			bestWeightsEpoch = epoch
 		}
 
-		if debugMode {
+		if debugMode >= 2 {
 			fmt.Printf("After epoch %d: validationError: %f currently going to do %d epochs\n", epoch, validationError, numberOfEpochs)
 		}
 	}
 
 	testErrorRate, _ := f(testX, testy, bestWeights)
 
-	if debugMode {
+	if debugMode >= 1 {
 		fmt.Printf("SGD ended after %d epochs having %f error on test set\n", numberOfEpochs, testErrorRate)
 	}
 
