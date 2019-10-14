@@ -47,3 +47,27 @@ func PlayNGames(newGameFactory NewGameFactory, player1 player.Player, player2 pl
 
 	return results, totalPositions
 }
+
+func ComparePlayers(gameFactory NewGameFactory, player1 player.Player, player2 player.Player, numberOfGames int) int {
+	player1Wins := 0
+	halfOfGames := numberOfGames / 2
+
+	results, _ := PlayNGames(gameFactory, player1, player2, halfOfGames)
+
+	for _, result := range results {
+		if result.Winner == game.BLACK {
+			player1Wins += 1
+		}
+	}
+
+	restOfGames := numberOfGames - halfOfGames
+	results, _ = PlayNGames(gameFactory, player2, player1, restOfGames)
+
+	for _, result := range results {
+		if result.Winner == game.WHITE {
+			player1Wins += 1
+		}
+	}
+
+	return player1Wins
+}

@@ -6,7 +6,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/jamOne-/kiwi-zero/evaluator"
 	"github.com/jamOne-/kiwi-zero/monteCarloTreeSearchPlayer"
 	"github.com/jamOne-/kiwi-zero/sgd"
 
@@ -31,9 +30,9 @@ var COMPARE_WITH_OLD_MINMAX = true
 func main() {
 	rand.Seed(time.Now().UnixNano())
 
-	// bestWeights := getInitialWeights()
-	bestWeights := getTriangleInitialWeights()
-	valueFn := createWeightedReversiFn(ReversiToFeaturesTriangle, bestWeights)
+	bestWeights := getInitialWeights()
+	// bestWeights := getTriangleInitialWeights()
+	valueFn := createWeightedReversiFn(ReversiToFeatures, bestWeights)
 	bestPlayer := minMaxPlayer.NewMinMaxPlayer(MINMAX_DEPTH, valueFn)
 	selfPlayPlayer := minMaxPlayer.NewEpsilonGreedyMinMaxPlayer(MINMAX_DEPTH, EPSILON, valueFn)
 
@@ -41,7 +40,7 @@ func main() {
 	historyYs := make([]float64, 0)
 
 	mctsPlayer := monteCarloTreeSearchPlayer.NewMonteCarloTreeSearchPlayer(1000)
-	// minMaxWins := evaluator.ComparePlayers(reversiGameFactory, bestPlayer, mctsPlayer, 2*EVALUATOR_GAMES)
+	// minMaxWins := runner.ComparePlayers(reversiGameFactory, bestPlayer, mctsPlayer, 2*EVALUATOR_GAMES)
 	// fmt.Printf("MinMax won %d / %d games versus MCTS\n", minMaxWins, 2*EVALUATOR_GAMES)
 	minMaxWins := 0
 
@@ -59,14 +58,14 @@ func main() {
 
 		if COMPARE_WITH_OLD_MINMAX && (iteration+1)%10 == 0 {
 			numberOfGames := 20
-			bestWins := evaluator.ComparePlayers(reversiGameFactory, bestPlayer, oldMinMaxPlayer, numberOfGames)
+			bestWins := runner.ComparePlayers(reversiGameFactory, bestPlayer, oldMinMaxPlayer, numberOfGames)
 			fmt.Printf("Current best player won %d / %d games versus OLD MinMax\n", bestWins, numberOfGames)
 		}
 
 		results, totalPositions := runner.PlayNGames(reversiGameFactory, selfPlayPlayer, selfPlayPlayer, GAMES_PER_ITERATION)
 		// utils.SaveGameResultsToFile(results, strings.Replace(time.Now().String()[:19], ":", "", -1)+".txt")
 
-		Xs, ys := gameResultsToXsAndys(ReversiToFeaturesTriangle, results, totalPositions)
+		Xs, ys := gameResultsToXsAndys(ReversiToFeatures, results, totalPositions)
 		// Xs, ys := gameResultsToXsAndys2(ReversiToFeaturesTriangle, results, 10)
 		historyPositions = append(historyPositions, Xs...)
 		historyYs = append(historyYs, ys...)
@@ -87,9 +86,9 @@ func main() {
 			"max_epochs": 10000,
 			"debug":      1})
 
-		newValueFn := createWeightedReversiFn(ReversiToFeaturesTriangle, sgdResult.BestWeights)
+		newValueFn := createWeightedReversiFn(ReversiToFeatures, sgdResult.BestWeights)
 		candidate := minMaxPlayer.NewMinMaxPlayer(MINMAX_DEPTH, newValueFn)
-		candidateWins := evaluator.ComparePlayers(reversiGameFactory, candidate, bestPlayer, EVALUATOR_GAMES)
+		candidateWins := runner.ComparePlayers(reversiGameFactory, candidate, bestPlayer, EVALUATOR_GAMES)
 
 		fmt.Printf("New candidate won %d / %d games\n", candidateWins, EVALUATOR_GAMES)
 
@@ -105,7 +104,7 @@ func main() {
 
 	fmt.Println(bestWeights.RawVector().Data)
 
-	minMaxWins = evaluator.ComparePlayers(reversiGameFactory, bestPlayer, mctsPlayer, 5*EVALUATOR_GAMES)
+	minMaxWins = runner.ComparePlayers(reversiGameFactory, bestPlayer, mctsPlayer, 5*EVALUATOR_GAMES)
 	fmt.Printf("MinMax won %d / %d games versus MCTS\n", minMaxWins, 5*EVALUATOR_GAMES)
 
 	SaveWeightsToFile(bestWeights, "weights_"+strings.Replace(time.Now().String()[:19], ":", "", -1)+".txt")
