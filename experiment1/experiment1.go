@@ -3,70 +3,78 @@ package main
 import (
 	"fmt"
 	"math/rand"
-	"strings"
+	"os"
+	"path"
+	"path/filepath"
 	"time"
-
-	"github.com/jamOne-/kiwi-zero/monteCarloTreeSearchPlayer"
-	"github.com/jamOne-/kiwi-zero/sgd"
-
-	"gonum.org/v1/gonum/mat"
 
 	"github.com/jamOne-/kiwi-zero/game"
 	"github.com/jamOne-/kiwi-zero/minMaxPlayer"
+	"github.com/jamOne-/kiwi-zero/monteCarloTreeSearchPlayer"
 	"github.com/jamOne-/kiwi-zero/reversi"
 	"github.com/jamOne-/kiwi-zero/runner"
+	"github.com/jamOne-/kiwi-zero/sgd"
+	"github.com/jamOne-/kiwi-zero/utils"
+
+	"gonum.org/v1/gonum/mat"
 )
 
 var BREAK_AFTER_NO_CHANGES = 20
+var COMPARE_WITH_OLD_MINMAX = true
 var EPSILON = 0.1
 var EVALUATOR_GAMES = 15
 var GAMES_PER_ITERATION = 20
-var ITERATIONS = 2000
+var ITERATIONS = 1
 var MAX_HISTORY_LENGTH = 30000
+var MCTS_SIMULATIONS = 1000
+var MCTS_COMPARE_GAMES = 100
 var MINMAX_DEPTH = 4
 var TRAINING_SIZE = 256
-var COMPARE_WITH_OLD_MINMAX = true
+var TRAINING_MODE = "normal" // "normal" | "triangle"
+var RESULTS_DIR_NAME = ""
+var OLD_MINMAX_WEIGHTS_PATH = "./weights_2019-10-10 231145.txt"
+var OLD_MINMAX_MODE = "triangle"
+
+var INITIAL_WEIGHTS_BY_MODE = map[string](func() *mat.VecDense){
+	"normal":   getInitialWeights,
+	"triangle": getTriangleInitialWeights}
+
+var REVERSI_TO_FEATURES_BY_MODE = map[string]ReversiToFeaturesFn{
+	"normal":   ReversiToFeatures,
+	"triangle": ReversiToFeaturesTriangle}
 
 func main() {
 	rand.Seed(time.Now().UnixNano())
+	resultsDirPath := createResultsDir(RESULTS_DIR_NAME)
 
-	bestWeights := getInitialWeights()
-	// bestWeights := getTriangleInitialWeights()
-	valueFn := createWeightedReversiFn(ReversiToFeatures, bestWeights)
+	initialWeights := INITIAL_WEIGHTS_BY_MODE[TRAINING_MODE]()
+	reversiToFeaturesFn := REVERSI_TO_FEATURES_BY_MODE[TRAINING_MODE]
+	valueFn := createWeightedReversiFn(reversiToFeaturesFn, initialWeights)
+	bestWeights := initialWeights
 	bestPlayer := minMaxPlayer.NewMinMaxPlayer(MINMAX_DEPTH, valueFn)
 	selfPlayPlayer := minMaxPlayer.NewEpsilonGreedyMinMaxPlayer(MINMAX_DEPTH, EPSILON, valueFn)
 
-	historyPositions := make([]*mat.VecDense, 0)
-	historyYs := make([]float64, 0)
-
-	mctsPlayer := monteCarloTreeSearchPlayer.NewMonteCarloTreeSearchPlayer(1000)
-	// minMaxWins := runner.ComparePlayers(reversiGameFactory, bestPlayer, mctsPlayer, 2*EVALUATOR_GAMES)
-	// fmt.Printf("MinMax won %d / %d games versus MCTS\n", minMaxWins, 2*EVALUATOR_GAMES)
-	minMaxWins := 0
-
-	// oldWeights := mat.NewVecDense(len(OLD_MINMAX_WEIGHTS), OLD_MINMAX_WEIGHTS)
-	// oldValueFn := createWeightedReversiFn(ReversiToFeatures, oldWeights)
-	// oldMinMaxPlayer := minMaxPlayer.NewMinMaxPlayer(MINMAX_DEPTH, oldValueFn)
-	oldWeights := LoadWeightsFromFile("./weights_2019-10-10 231145.txt")
-	oldValueFn := createWeightedReversiFn(ReversiToFeaturesTriangle, oldWeights)
+	oldWeights := LoadWeightsFromFile(OLD_MINMAX_WEIGHTS_PATH)
+	oldValueFn := createWeightedReversiFn(REVERSI_TO_FEATURES_BY_MODE[OLD_MINMAX_MODE], oldWeights)
 	oldMinMaxPlayer := minMaxPlayer.NewMinMaxPlayer(MINMAX_DEPTH, oldValueFn)
 
 	lastIterationChange := -1
+	historyPositions := make([]*mat.VecDense, 0)
+	historyYs := make([]float64, 0)
 
 	for iteration := 0; iteration < ITERATIONS && iteration-lastIterationChange < BREAK_AFTER_NO_CHANGES; iteration++ {
-		fmt.Printf("Iteration %d / %d (lastIterationChange=%d)...\n", iteration+1, ITERATIONS, lastIterationChange+1)
+		fmt.Printf("Iteration %d/%d (lastIterationChange=%d => %d/%d)...\n", iteration+1, ITERATIONS, lastIterationChange+1, iteration-lastIterationChange, BREAK_AFTER_NO_CHANGES)
 
 		if COMPARE_WITH_OLD_MINMAX && (iteration+1)%10 == 0 {
 			numberOfGames := 20
 			bestWins := runner.ComparePlayers(reversiGameFactory, bestPlayer, oldMinMaxPlayer, numberOfGames)
-			fmt.Printf("Current best player won %d / %d games versus OLD MinMax\n", bestWins, numberOfGames)
+			fmt.Printf("Current best player won %d/%d games versus OLD MinMax\n", bestWins, numberOfGames)
 		}
 
 		results, totalPositions := runner.PlayNGames(reversiGameFactory, selfPlayPlayer, selfPlayPlayer, GAMES_PER_ITERATION)
-		// utils.SaveGameResultsToFile(results, strings.Replace(time.Now().String()[:19], ":", "", -1)+".txt")
+		// utils.SaveGameResultsToFile(results, path.Join(resultsDirPath, iteration+"_results.txt")
 
-		Xs, ys := gameResultsToXsAndys(ReversiToFeatures, results, totalPositions)
-		// Xs, ys := gameResultsToXsAndys2(ReversiToFeaturesTriangle, results, 10)
+		Xs, ys := gameResultsToXsAndys(reversiToFeaturesFn, results, totalPositions)
 		historyPositions = append(historyPositions, Xs...)
 		historyYs = append(historyYs, ys...)
 
@@ -86,11 +94,11 @@ func main() {
 			"max_epochs": 10000,
 			"debug":      1})
 
-		newValueFn := createWeightedReversiFn(ReversiToFeatures, sgdResult.BestWeights)
+		newValueFn := createWeightedReversiFn(reversiToFeaturesFn, sgdResult.BestWeights)
 		candidate := minMaxPlayer.NewMinMaxPlayer(MINMAX_DEPTH, newValueFn)
 		candidateWins := runner.ComparePlayers(reversiGameFactory, candidate, bestPlayer, EVALUATOR_GAMES)
 
-		fmt.Printf("New candidate won %d / %d games\n", candidateWins, EVALUATOR_GAMES)
+		fmt.Printf("New candidate won %d/%d games\n", candidateWins, EVALUATOR_GAMES)
 
 		if float64(candidateWins)/float64(EVALUATOR_GAMES) > 0.5 {
 			bestPlayer = candidate
@@ -104,10 +112,12 @@ func main() {
 
 	fmt.Println(bestWeights.RawVector().Data)
 
-	minMaxWins = runner.ComparePlayers(reversiGameFactory, bestPlayer, mctsPlayer, 5*EVALUATOR_GAMES)
-	fmt.Printf("MinMax won %d / %d games versus MCTS\n", minMaxWins, 5*EVALUATOR_GAMES)
+	mctsPlayer := monteCarloTreeSearchPlayer.NewMonteCarloTreeSearchPlayer(MCTS_SIMULATIONS)
+	minMaxWins := runner.ComparePlayers(reversiGameFactory, bestPlayer, mctsPlayer, MCTS_COMPARE_GAMES)
+	fmt.Printf("MinMax won %d/%d games versus MCTS\n", minMaxWins, MCTS_COMPARE_GAMES)
 
-	SaveWeightsToFile(bestWeights, "weights_"+strings.Replace(time.Now().String()[:19], ":", "", -1)+".txt")
+	bestWeightsPath := path.Join(resultsDirPath, "best_weights.txt")
+	SaveWeightsToFile(bestWeights, bestWeightsPath)
 }
 
 // just a wrap
@@ -161,4 +171,15 @@ func chooseXsAndys(XsSource []*mat.VecDense, ysSource []float64, N int) ([]*mat.
 	}
 
 	return Xs, ys
+}
+
+func createResultsDir(resultsDirName string) string {
+	if resultsDirName == "" {
+		resultsDirName = utils.TimeNowString()
+	}
+
+	path := filepath.Join("./results/", resultsDirName)
+	os.Mkdir(path, os.ModePerm)
+
+	return path
 }

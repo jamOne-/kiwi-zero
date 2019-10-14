@@ -3,6 +3,8 @@ package utils
 import (
 	"fmt"
 	"os"
+	"strings"
+	"time"
 
 	"github.com/jamOne-/kiwi-zero/runner"
 	"gonum.org/v1/gonum/mat"
@@ -50,4 +52,8 @@ func SaveGameResultsToFile(gameResults []*runner.GameResult, fileName string) {
 			fmt.Fprintf(file, "%d %s\n", currentPlayer, board)
 		}
 	}
+}
+
+func TimeNowString() string {
+	return strings.Replace(time.Now().String()[:19], ":", "", -1)
 }
