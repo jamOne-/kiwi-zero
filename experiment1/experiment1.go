@@ -6,6 +6,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strconv"
 	"time"
 
 	"github.com/jamOne-/kiwi-zero/game"
@@ -20,14 +21,16 @@ import (
 )
 
 var BREAK_AFTER_NO_CHANGES = 20
-var COMPARE_WITH_OLD_MINMAX = true
+var CHECKPOINT_EVERY = 100
+var COMPARE_AT_CHECKPOINTS = true
+var COMPARE_AT_CHECKPOINTS_GAMES = 20
 var EPSILON = 0.1
 var EVALUATOR_GAMES = 15
+var FINISH_COMPARISON_GAMES = 100
 var GAMES_PER_ITERATION = 20
-var ITERATIONS = 1
+var ITERATIONS = 2000
 var MAX_HISTORY_LENGTH = 30000
 var MCTS_SIMULATIONS = 1000
-var MCTS_COMPARE_GAMES = 100
 var MINMAX_DEPTH = 4
 var TRAINING_SIZE = 256
 var TRAINING_MODE = "normal" // "normal" | "triangle"
@@ -58,18 +61,14 @@ func main() {
 	oldValueFn := createWeightedReversiFn(REVERSI_TO_FEATURES_BY_MODE[OLD_MINMAX_MODE], oldWeights)
 	oldMinMaxPlayer := minMaxPlayer.NewMinMaxPlayer(MINMAX_DEPTH, oldValueFn)
 
+	mctsPlayer := monteCarloTreeSearchPlayer.NewMonteCarloTreeSearchPlayer(MCTS_SIMULATIONS)
+
 	lastIterationChange := -1
 	historyPositions := make([]*mat.VecDense, 0)
 	historyYs := make([]float64, 0)
 
 	for iteration := 0; iteration < ITERATIONS && iteration-lastIterationChange < BREAK_AFTER_NO_CHANGES; iteration++ {
-		fmt.Printf("Iteration %d/%d (lastIterationChange=%d => %d/%d)...\n", iteration+1, ITERATIONS, lastIterationChange+1, iteration-lastIterationChange, BREAK_AFTER_NO_CHANGES)
-
-		if COMPARE_WITH_OLD_MINMAX && (iteration+1)%10 == 0 {
-			numberOfGames := 20
-			bestWins := runner.ComparePlayers(reversiGameFactory, bestPlayer, oldMinMaxPlayer, numberOfGames)
-			fmt.Printf("Current best player won %d/%d games versus OLD MinMax\n", bestWins, numberOfGames)
-		}
+		fmt.Printf("Iteration %d/%d (lastIterationChange=%d => %d/%d)\n", iteration+1, ITERATIONS, lastIterationChange+1, iteration-lastIterationChange, BREAK_AFTER_NO_CHANGES)
 
 		results, totalPositions := runner.PlayNGames(reversiGameFactory, selfPlayPlayer, selfPlayPlayer, GAMES_PER_ITERATION)
 		// utils.SaveGameResultsToFile(results, path.Join(resultsDirPath, iteration+"_results.txt")
@@ -107,14 +106,39 @@ func main() {
 			lastIterationChange = iteration
 		}
 
-		fmt.Println("")
+		if CHECKPOINT_EVERY > 0 && iteration > 0 && iteration%CHECKPOINT_EVERY == 0 {
+			iterationString := strconv.Itoa(iteration)
+			checkpointWeightsPath := path.Join(resultsDirPath, iterationString+"_weights.txt")
+
+			SaveWeightsToFile(bestWeights, checkpointWeightsPath)
+
+			if COMPARE_AT_CHECKPOINTS {
+				resultsPath := path.Join(resultsDirPath, iterationString+"_results.txt")
+				resultsFile, _ := os.Create(resultsPath)
+				defer resultsFile.Close()
+
+				minMaxWins := runner.ComparePlayers(reversiGameFactory, bestPlayer, mctsPlayer, COMPARE_AT_CHECKPOINTS_GAMES)
+				mctsResultsInfo := fmt.Sprintf("MinMax won %d/%d games versus MCTS\n", minMaxWins, COMPARE_AT_CHECKPOINTS_GAMES)
+				fmt.Print(mctsResultsInfo)
+				fmt.Fprint(resultsFile, mctsResultsInfo)
+
+				minMaxWins = runner.ComparePlayers(reversiGameFactory, bestPlayer, oldMinMaxPlayer, COMPARE_AT_CHECKPOINTS_GAMES)
+				oldMinMaxResultsInfo := fmt.Sprintf("MinMax won %d/%d games versus OLD MinMax\n", minMaxWins, COMPARE_AT_CHECKPOINTS_GAMES)
+				fmt.Print(oldMinMaxResultsInfo)
+				fmt.Fprint(resultsFile, oldMinMaxResultsInfo)
+			}
+		}
+
+		fmt.Print("\n")
 	}
 
 	fmt.Println(bestWeights.RawVector().Data)
 
-	mctsPlayer := monteCarloTreeSearchPlayer.NewMonteCarloTreeSearchPlayer(MCTS_SIMULATIONS)
-	minMaxWins := runner.ComparePlayers(reversiGameFactory, bestPlayer, mctsPlayer, MCTS_COMPARE_GAMES)
-	fmt.Printf("MinMax won %d/%d games versus MCTS\n", minMaxWins, MCTS_COMPARE_GAMES)
+	minMaxWins := runner.ComparePlayers(reversiGameFactory, bestPlayer, mctsPlayer, FINISH_COMPARISON_GAMES)
+	fmt.Printf("MinMax won %d/%d games versus MCTS\n", minMaxWins, FINISH_COMPARISON_GAMES)
+
+	minMaxWins = runner.ComparePlayers(reversiGameFactory, bestPlayer, oldMinMaxPlayer, FINISH_COMPARISON_GAMES)
+	fmt.Printf("MinMax won %d/%d games versus OLD MinMax\n", minMaxWins, FINISH_COMPARISON_GAMES)
 
 	bestWeightsPath := path.Join(resultsDirPath, "best_weights.txt")
 	SaveWeightsToFile(bestWeights, bestWeightsPath)
