@@ -63,13 +63,15 @@ func main() {
 
 	mctsPlayer := monteCarloTreeSearchPlayer.NewMonteCarloTreeSearchPlayer(MCTS_SIMULATIONS)
 
+	avgIterationTime := 0
 	lastIterationChange := -1
 	historyPositions := make([]*mat.VecDense, 0)
 	historyYs := make([]float64, 0)
 
 	for iteration := 0; iteration < ITERATIONS && iteration-lastIterationChange < BREAK_AFTER_NO_CHANGES; iteration++ {
-		fmt.Printf("Iteration %d/%d (lastIterationChange=%d => %d/%d)\n", iteration+1, ITERATIONS, lastIterationChange+1, iteration-lastIterationChange, BREAK_AFTER_NO_CHANGES)
+		fmt.Printf("%d/%d (lastIterationChange=%d => %d/%d)\t%v left\n", iteration+1, ITERATIONS, lastIterationChange+1, iteration-lastIterationChange, BREAK_AFTER_NO_CHANGES, time.Duration(avgIterationTime*(ITERATIONS-iteration))*time.Nanosecond)
 
+		iterationTimeStart := time.Now()
 		results, totalPositions := runner.PlayNGames(reversiGameFactory, selfPlayPlayer, selfPlayPlayer, GAMES_PER_ITERATION)
 		// utils.SaveGameResultsToFile(results, path.Join(resultsDirPath, iteration+"_results.txt")
 
@@ -129,6 +131,7 @@ func main() {
 			}
 		}
 
+		avgIterationTime += (int(time.Since(iterationTimeStart)) - avgIterationTime) / (iteration + 1)
 		fmt.Print("\n")
 	}
 
