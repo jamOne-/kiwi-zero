@@ -17,28 +17,10 @@ import (
 	"github.com/jamOne-/kiwi-zero/runner"
 	"github.com/jamOne-/kiwi-zero/sgd"
 	"github.com/jamOne-/kiwi-zero/utils"
+	"github.com/spf13/viper"
 
 	"gonum.org/v1/gonum/mat"
 )
-
-var BREAK_AFTER_NO_CHANGES = 50
-var CHECKPOINT_EVERY = 100
-var COMPARE_AT_CHECKPOINTS = true
-var COMPARE_AT_CHECKPOINTS_GAMES = 20
-var EPSILON = 0.1
-var EVALUATOR_GAMES = 16
-var FINISH_COMPARISON_GAMES = 100
-var GAMES_PER_ITERATION = 20
-var INITIAL_WEIGHTS_PATH = "./results/2019-10-14 200020/best_weights.txt"
-var ITERATIONS = 5000
-var MAX_HISTORY_LENGTH = 30000
-var MCTS_SIMULATIONS = 1000
-var MINMAX_DEPTH = 4
-var TRAINING_SIZE = 256
-var TRAINING_MODE = "normal" // "normal" | "triangle"
-var RESULTS_DIR_NAME = ""
-var OLD_MINMAX_WEIGHTS_PATH = "./weights_2019-10-10 231145.txt"
-var OLD_MINMAX_MODE = "triangle"
 
 var INITIAL_WEIGHTS_BY_MODE = map[string](func() *mat.VecDense){
 	"normal":   getInitialWeights,
@@ -50,7 +32,31 @@ var REVERSI_TO_FEATURES_BY_MODE = map[string]ReversiToFeaturesFn{
 
 func main() {
 	rand.Seed(time.Now().UnixNano())
+	initConfig()
+
+	BREAK_AFTER_NO_CHANGES := viper.GetInt("BREAK_AFTER_NO_CHANGES")
+	CHECKPOINT_EVERY := viper.GetInt("CHECKPOINT_EVERY")
+	COMPARE_AT_CHECKPOINTS := viper.GetBool("COMPARE_AT_CHECKPOINTS")
+	COMPARE_AT_CHECKPOINTS_GAMES := viper.GetInt("COMPARE_AT_CHECKPOINTS_GAMES")
+	EPSILON := viper.GetFloat64("EPSILON")
+	EVALUATOR_GAMES := viper.GetInt("EVALUATOR_GAMES")
+	FINISH_COMPARISON_GAMES := viper.GetInt("FINISH_COMPARISON_GAMES")
+	GAMES_PER_ITERATION := viper.GetInt("GAMES_PER_ITERATION")
+	INITIAL_WEIGHTS_PATH := viper.GetString("INITIAL_WEIGHTS_PATH")
+	ITERATIONS := viper.GetInt("ITERATIONS")
+	MAX_HISTORY_LENGTH := viper.GetInt("MAX_HISTORY_LENGTH")
+	MCTS_SIMULATIONS := viper.GetInt("MCTS_SIMULATIONS")
+	MINMAX_DEPTH := viper.GetInt("MINMAX_DEPTH")
+	TRAINING_SIZE := viper.GetInt("TRAINING_SIZE")
+	TRAINING_MODE := viper.GetString("TRAINING_MODE")
+	RESULTS_DIR_NAME := viper.GetString("RESULTS_DIR_NAME")
+	OLD_MINMAX_WEIGHTS_PATH := viper.GetString("OLD_MINMAX_WEIGHTS_PATH")
+	OLD_MINMAX_MODE := viper.GetString("OLD_MINMAX_MODE")
+	SGD_CONFIG := viper.Get("SGD_CONFIG").(map[string]float64)
+
 	resultsDirPath := createResultsDir(RESULTS_DIR_NAME)
+	configPath := path.Join(resultsDirPath, "config.yaml")
+	viper.WriteConfigAs(configPath)
 
 	initialWeights := INITIAL_WEIGHTS_BY_MODE[TRAINING_MODE]()
 	if INITIAL_WEIGHTS_PATH != "" {
@@ -92,14 +98,7 @@ func main() {
 		}
 
 		Xs, ys = chooseXsAndys(historyPositions, historyYs, TRAINING_SIZE)
-
-		sgdResult := sgd.SGD(sgd.MeanSquaredErrorWithGradient, bestWeights, Xs, ys, map[string]float64{
-			"alpha0":     5e-5,
-			"alphaConst": 0,
-			"momentum":   0.9,
-			"batch_size": 16,
-			"max_epochs": 10000,
-			"debug":      1})
+		sgdResult := sgd.SGD(sgd.MeanSquaredErrorWithGradient, bestWeights, Xs, ys, SGD_CONFIG)
 
 		newValueFn := createWeightedReversiFn(reversiToFeaturesFn, sgdResult.BestWeights)
 		candidate := minMaxPlayer.NewMinMaxPlayer(MINMAX_DEPTH, newValueFn)
@@ -122,8 +121,8 @@ func main() {
 
 			if COMPARE_AT_CHECKPOINTS {
 				resultsPath := path.Join(resultsDirPath, iterationString+"_results.txt")
-				comparePlayersAndSaveResults(resultsPath, bestPlayer, "MinMax", mctsPlayer, "MCTS", FINISH_COMPARISON_GAMES)
-				comparePlayersAndSaveResults(resultsPath, bestPlayer, "MinMax", oldMinMaxPlayer, "OLD MinMax", FINISH_COMPARISON_GAMES)
+				comparePlayersAndSaveResults(resultsPath, bestPlayer, "MinMax", mctsPlayer, "MCTS", COMPARE_AT_CHECKPOINTS_GAMES)
+				comparePlayersAndSaveResults(resultsPath, bestPlayer, "MinMax", oldMinMaxPlayer, "OLD MinMax", COMPARE_AT_CHECKPOINTS_GAMES)
 			}
 		}
 
