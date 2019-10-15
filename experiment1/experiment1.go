@@ -20,7 +20,7 @@ import (
 	"gonum.org/v1/gonum/mat"
 )
 
-var BREAK_AFTER_NO_CHANGES = 20
+var BREAK_AFTER_NO_CHANGES = 50
 var CHECKPOINT_EVERY = 100
 var COMPARE_AT_CHECKPOINTS = true
 var COMPARE_AT_CHECKPOINTS_GAMES = 20
@@ -28,7 +28,8 @@ var EPSILON = 0.1
 var EVALUATOR_GAMES = 15
 var FINISH_COMPARISON_GAMES = 100
 var GAMES_PER_ITERATION = 20
-var ITERATIONS = 2000
+var INITIAL_WEIGHTS_PATH = "./results/2019-10-14 200020/best_weights.txt"
+var ITERATIONS = 5000
 var MAX_HISTORY_LENGTH = 30000
 var MCTS_SIMULATIONS = 1000
 var MINMAX_DEPTH = 4
@@ -51,6 +52,10 @@ func main() {
 	resultsDirPath := createResultsDir(RESULTS_DIR_NAME)
 
 	initialWeights := INITIAL_WEIGHTS_BY_MODE[TRAINING_MODE]()
+	if INITIAL_WEIGHTS_PATH != "" {
+		initialWeights = LoadWeightsFromFile(INITIAL_WEIGHTS_PATH)
+	}
+
 	reversiToFeaturesFn := REVERSI_TO_FEATURES_BY_MODE[TRAINING_MODE]
 	valueFn := createWeightedReversiFn(reversiToFeaturesFn, initialWeights)
 	bestWeights := initialWeights
