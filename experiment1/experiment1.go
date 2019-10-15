@@ -12,6 +12,7 @@ import (
 	"github.com/jamOne-/kiwi-zero/game"
 	"github.com/jamOne-/kiwi-zero/minMaxPlayer"
 	"github.com/jamOne-/kiwi-zero/monteCarloTreeSearchPlayer"
+	"github.com/jamOne-/kiwi-zero/player"
 	"github.com/jamOne-/kiwi-zero/reversi"
 	"github.com/jamOne-/kiwi-zero/runner"
 	"github.com/jamOne-/kiwi-zero/sgd"
@@ -25,7 +26,7 @@ var CHECKPOINT_EVERY = 100
 var COMPARE_AT_CHECKPOINTS = true
 var COMPARE_AT_CHECKPOINTS_GAMES = 20
 var EPSILON = 0.1
-var EVALUATOR_GAMES = 15
+var EVALUATOR_GAMES = 16
 var FINISH_COMPARISON_GAMES = 100
 var GAMES_PER_ITERATION = 20
 var INITIAL_WEIGHTS_PATH = "./results/2019-10-14 200020/best_weights.txt"
@@ -121,18 +122,8 @@ func main() {
 
 			if COMPARE_AT_CHECKPOINTS {
 				resultsPath := path.Join(resultsDirPath, iterationString+"_results.txt")
-				resultsFile, _ := os.Create(resultsPath)
-				defer resultsFile.Close()
-
-				minMaxWins := runner.ComparePlayers(reversiGameFactory, bestPlayer, mctsPlayer, COMPARE_AT_CHECKPOINTS_GAMES)
-				mctsResultsInfo := fmt.Sprintf("MinMax won %d/%d games versus MCTS\n", minMaxWins, COMPARE_AT_CHECKPOINTS_GAMES)
-				fmt.Print(mctsResultsInfo)
-				fmt.Fprint(resultsFile, mctsResultsInfo)
-
-				minMaxWins = runner.ComparePlayers(reversiGameFactory, bestPlayer, oldMinMaxPlayer, COMPARE_AT_CHECKPOINTS_GAMES)
-				oldMinMaxResultsInfo := fmt.Sprintf("MinMax won %d/%d games versus OLD MinMax\n", minMaxWins, COMPARE_AT_CHECKPOINTS_GAMES)
-				fmt.Print(oldMinMaxResultsInfo)
-				fmt.Fprint(resultsFile, oldMinMaxResultsInfo)
+				comparePlayersAndSaveResults(resultsPath, bestPlayer, "MinMax", mctsPlayer, "MCTS", FINISH_COMPARISON_GAMES)
+				comparePlayersAndSaveResults(resultsPath, bestPlayer, "MinMax", oldMinMaxPlayer, "OLD MinMax", FINISH_COMPARISON_GAMES)
 			}
 		}
 
@@ -141,15 +132,12 @@ func main() {
 	}
 
 	fmt.Println(bestWeights.RawVector().Data)
-
-	minMaxWins := runner.ComparePlayers(reversiGameFactory, bestPlayer, mctsPlayer, FINISH_COMPARISON_GAMES)
-	fmt.Printf("MinMax won %d/%d games versus MCTS\n", minMaxWins, FINISH_COMPARISON_GAMES)
-
-	minMaxWins = runner.ComparePlayers(reversiGameFactory, bestPlayer, oldMinMaxPlayer, FINISH_COMPARISON_GAMES)
-	fmt.Printf("MinMax won %d/%d games versus OLD MinMax\n", minMaxWins, FINISH_COMPARISON_GAMES)
-
 	bestWeightsPath := path.Join(resultsDirPath, "best_weights.txt")
 	SaveWeightsToFile(bestWeights, bestWeightsPath)
+
+	bestResultsPath := path.Join(resultsDirPath, "best_results.txt")
+	comparePlayersAndSaveResults(bestResultsPath, bestPlayer, "MinMax", mctsPlayer, "MCTS", FINISH_COMPARISON_GAMES)
+	comparePlayersAndSaveResults(bestResultsPath, bestPlayer, "MinMax", oldMinMaxPlayer, "OLD MinMax", FINISH_COMPARISON_GAMES)
 }
 
 // just a wrap
@@ -214,4 +202,14 @@ func createResultsDir(resultsDirName string) string {
 	os.Mkdir(path, os.ModePerm)
 
 	return path
+}
+
+func comparePlayersAndSaveResults(filePath string, player1 player.Player, player1Name string, player2 player.Player, player2Name string, numberOfGames int) {
+	resultsFile, _ := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	defer resultsFile.Close()
+
+	player1Wins := runner.ComparePlayers(reversiGameFactory, player1, player2, numberOfGames)
+	resultsInfo := fmt.Sprintf("%s won %d/%d games versus %s\n", player1Name, player1Wins, numberOfGames, player2Name)
+	fmt.Print(resultsInfo)
+	fmt.Fprint(resultsFile, resultsInfo)
 }
