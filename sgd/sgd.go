@@ -3,7 +3,6 @@ package sgd
 import (
 	"fmt"
 	"math"
-	"math/rand"
 
 	"gonum.org/v1/gonum/mat"
 
@@ -31,7 +30,7 @@ var DEFAULT_PARAMETERS = map[string]float64{
 	"patience_expansion":   1.5,
 	"validation_set_ratio": 0.2,
 	"test_set_ratio":       0.2,
-	"weights_decay":        0.0,
+	"weights_decay":        5e-4,
 	"debug":                1}
 
 func SGD(f OptimizeFn, weights *mat.VecDense, Xs []*mat.VecDense, ys []float64, parameters map[string]float64) *SGDReturn {
@@ -42,7 +41,7 @@ func SGD(f OptimizeFn, weights *mat.VecDense, Xs []*mat.VecDense, ys []float64, 
 	numberOfEpochs := int(parameters["epochs"])
 	maxEpochs := int(parameters["max_epochs"])
 	patienceExpansion := parameters["patience_expansion"]
-	// weightsDecay := parameters["weightsDecay"]
+	weightsDecay := parameters["weightsDecay"]
 
 	i := 0
 	epoch := 0
@@ -61,10 +60,10 @@ func SGD(f OptimizeFn, weights *mat.VecDense, Xs []*mat.VecDense, ys []float64, 
 	// trainLoss := make([]float64, 0)
 	validationErrors := make([]float64, 0)
 
-	rand.Shuffle(len(Xs), func(i int, j int) {
-		Xs[i], Xs[j] = Xs[j], Xs[i]
-		ys[i], ys[j] = ys[j], ys[i]
-	})
+	// rand.Shuffle(len(Xs), func(i int, j int) {
+	// 	Xs[i], Xs[j] = Xs[j], Xs[i]
+	// 	ys[i], ys[j] = ys[j], ys[i]
+	// })
 
 	testSetSize := int(math.Floor(parameters["test_set_ratio"] * float64(len(Xs))))
 	testX, testy := Xs[:testSetSize], ys[:testSetSize]
@@ -92,6 +91,8 @@ func SGD(f OptimizeFn, weights *mat.VecDense, Xs []*mat.VecDense, ys []float64, 
 			if debugMode >= 3 && i%100 == 0 {
 				fmt.Printf("After batch %d: errorRate: %f\n", i, errorRate)
 			}
+
+			gradient.AddScaledVec(gradient, weightsDecay, weights)
 
 			alpha := alpha0 / (1.0 + alphaConst*float64(i))
 			velocities.ScaleVec(momentum, velocities)
