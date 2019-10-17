@@ -1,4 +1,4 @@
-package main
+package reversiValueFns
 
 import (
 	"fmt"
@@ -16,7 +16,7 @@ type ReversiToFeaturesFn func(reversiGame *reversi.ReversiGame) *mat.VecDense
 
 var NUMBER_OF_FEATURES = 8*8 + 2 // fields + count + mobility
 
-func createWeightedReversiFn(reversiToFeaturesFn ReversiToFeaturesFn, weights *mat.VecDense) minMaxPlayer.ValueFn {
+func CreateWeightedReversiFn(reversiToFeaturesFn ReversiToFeaturesFn, weights *mat.VecDense) minMaxPlayer.ValueFn {
 	return func(g game.Game) float64 {
 		reversiGame := g.(*reversi.ReversiGame) // nieładnie, ale brak generyków to jest jakiś dramat
 
@@ -27,7 +27,7 @@ func createWeightedReversiFn(reversiToFeaturesFn ReversiToFeaturesFn, weights *m
 	}
 }
 
-func getInitialWeights() *mat.VecDense {
+func GetInitialWeights() *mat.VecDense {
 	weights := make([]float64, NUMBER_OF_FEATURES)
 
 	for i := 0; i < NUMBER_OF_FEATURES; i++ {
@@ -109,7 +109,7 @@ func ReversiToFeaturesTriangle(reversiGame *reversi.ReversiGame) *mat.VecDense {
 	return features
 }
 
-func getTriangleInitialWeights() *mat.VecDense {
+func GetTriangleInitialWeights() *mat.VecDense {
 	triangleNumberOfFeatures := 4 + 3 + 2 + 1 + 2
 	weights := make([]float64, triangleNumberOfFeatures)
 

@@ -14,6 +14,7 @@ import (
 	"github.com/jamOne-/kiwi-zero/monteCarloTreeSearchPlayer"
 	"github.com/jamOne-/kiwi-zero/player"
 	"github.com/jamOne-/kiwi-zero/reversi"
+	"github.com/jamOne-/kiwi-zero/reversiValueFns"
 	"github.com/jamOne-/kiwi-zero/runner"
 	"github.com/jamOne-/kiwi-zero/sgd"
 	"github.com/jamOne-/kiwi-zero/utils"
@@ -23,12 +24,12 @@ import (
 )
 
 var INITIAL_WEIGHTS_BY_MODE = map[string](func() *mat.VecDense){
-	"normal":   getInitialWeights,
-	"triangle": getTriangleInitialWeights}
+	"normal":   reversiValueFns.GetInitialWeights,
+	"triangle": reversiValueFns.GetTriangleInitialWeights}
 
-var REVERSI_TO_FEATURES_BY_MODE = map[string]ReversiToFeaturesFn{
-	"normal":   ReversiToFeatures,
-	"triangle": ReversiToFeaturesTriangle}
+var REVERSI_TO_FEATURES_BY_MODE = map[string]reversiValueFns.ReversiToFeaturesFn{
+	"normal":   reversiValueFns.ReversiToFeatures,
+	"triangle": reversiValueFns.ReversiToFeaturesTriangle}
 
 func main() {
 	rand.Seed(time.Now().UnixNano())
@@ -60,17 +61,17 @@ func main() {
 
 	initialWeights := INITIAL_WEIGHTS_BY_MODE[TRAINING_MODE]()
 	if INITIAL_WEIGHTS_PATH != "" {
-		initialWeights = LoadWeightsFromFile(INITIAL_WEIGHTS_PATH)
+		initialWeights = reversiValueFns.LoadWeightsFromFile(INITIAL_WEIGHTS_PATH)
 	}
 
 	reversiToFeaturesFn := REVERSI_TO_FEATURES_BY_MODE[TRAINING_MODE]
-	valueFn := createWeightedReversiFn(reversiToFeaturesFn, initialWeights)
+	valueFn := reversiValueFns.CreateWeightedReversiFn(reversiToFeaturesFn, initialWeights)
 	bestWeights := initialWeights
 	bestPlayer := minMaxPlayer.NewMinMaxPlayer(MINMAX_DEPTH, valueFn)
 	selfPlayPlayer := minMaxPlayer.NewEpsilonGreedyMinMaxPlayer(MINMAX_DEPTH, EPSILON, valueFn)
 
-	oldWeights := LoadWeightsFromFile(OLD_MINMAX_WEIGHTS_PATH)
-	oldValueFn := createWeightedReversiFn(REVERSI_TO_FEATURES_BY_MODE[OLD_MINMAX_MODE], oldWeights)
+	oldWeights := reversiValueFns.LoadWeightsFromFile(OLD_MINMAX_WEIGHTS_PATH)
+	oldValueFn := reversiValueFns.CreateWeightedReversiFn(REVERSI_TO_FEATURES_BY_MODE[OLD_MINMAX_MODE], oldWeights)
 	oldMinMaxPlayer := minMaxPlayer.NewMinMaxPlayer(MINMAX_DEPTH, oldValueFn)
 
 	mctsPlayer := monteCarloTreeSearchPlayer.NewMonteCarloTreeSearchPlayer(MCTS_SIMULATIONS)
@@ -100,7 +101,7 @@ func main() {
 		Xs, ys = chooseXsAndys(historyPositions, historyYs, TRAINING_SIZE)
 		sgdResult := sgd.SGD(sgd.MeanSquaredErrorWithGradient, bestWeights, Xs, ys, SGD_CONFIG)
 
-		newValueFn := createWeightedReversiFn(reversiToFeaturesFn, sgdResult.BestWeights)
+		newValueFn := reversiValueFns.CreateWeightedReversiFn(reversiToFeaturesFn, sgdResult.BestWeights)
 		candidate := minMaxPlayer.NewMinMaxPlayer(MINMAX_DEPTH, newValueFn)
 		candidateWins := runner.ComparePlayers(reversiGameFactory, candidate, bestPlayer, EVALUATOR_GAMES)
 
@@ -117,7 +118,7 @@ func main() {
 			iterationString := strconv.Itoa(iteration)
 			checkpointWeightsPath := path.Join(resultsDirPath, iterationString+"_weights.txt")
 
-			SaveWeightsToFile(bestWeights, checkpointWeightsPath)
+			reversiValueFns.SaveWeightsToFile(bestWeights, checkpointWeightsPath)
 
 			if COMPARE_AT_CHECKPOINTS {
 				resultsPath := path.Join(resultsDirPath, iterationString+"_results.txt")
@@ -132,7 +133,7 @@ func main() {
 
 	fmt.Println(bestWeights.RawVector().Data)
 	bestWeightsPath := path.Join(resultsDirPath, "best_weights.txt")
-	SaveWeightsToFile(bestWeights, bestWeightsPath)
+	reversiValueFns.SaveWeightsToFile(bestWeights, bestWeightsPath)
 
 	bestResultsPath := path.Join(resultsDirPath, "best_results.txt")
 	comparePlayersAndSaveResults(bestResultsPath, bestPlayer, "MinMax", mctsPlayer, "MCTS", FINISH_COMPARISON_GAMES)
@@ -144,7 +145,7 @@ func reversiGameFactory() game.Game {
 	return reversi.NewReversiGame()
 }
 
-func gameResultsToXsAndys(reversiToFeaturesFn ReversiToFeaturesFn, results []*runner.GameResult, totalPositions int) ([]*mat.VecDense, []float64) {
+func gameResultsToXsAndys(reversiToFeaturesFn reversiValueFns.ReversiToFeaturesFn, results []*runner.GameResult, totalPositions int) ([]*mat.VecDense, []float64) {
 	Xs := make([]*mat.VecDense, totalPositions)
 	ys := make([]float64, totalPositions)
 
@@ -161,7 +162,7 @@ func gameResultsToXsAndys(reversiToFeaturesFn ReversiToFeaturesFn, results []*ru
 	return Xs, ys
 }
 
-func gameResultsToXsAndys2(reversiToFeaturesFn ReversiToFeaturesFn, results []*runner.GameResult, positionsPerGame int) ([]*mat.VecDense, []float64) {
+func gameResultsToXsAndys2(reversiToFeaturesFn reversiValueFns.ReversiToFeaturesFn, results []*runner.GameResult, positionsPerGame int) ([]*mat.VecDense, []float64) {
 	totalPositions := len(results) * positionsPerGame
 	Xs := make([]*mat.VecDense, totalPositions)
 	ys := make([]float64, totalPositions)
