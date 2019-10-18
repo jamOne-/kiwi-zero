@@ -13,6 +13,11 @@ func SelfPlayLoop(bestWeights chan *mat.VecDense, gameResults chan *runner.GameR
 	EPSILON := viper.GetFloat64("EPSILON")
 	GAMES_PER_ITERATION := viper.GetInt("GAMES_PER_ITERATION")
 	MINMAX_DEPTH := viper.GetInt("MINMAX_DEPTH")
+	SELFPLAY_GAMES_AT_ONCE := viper.GetInt("SELFPLAY_GAMES_AT_ONCE")
+
+	if SELFPLAY_GAMES_AT_ONCE == 0 {
+		SELFPLAY_GAMES_AT_ONCE = GAMES_PER_ITERATION
+	}
 
 	selfPlayPlayer := createSelfPlayPlayer(initialWeights, MINMAX_DEPTH, EPSILON)
 
@@ -22,7 +27,7 @@ func SelfPlayLoop(bestWeights chan *mat.VecDense, gameResults chan *runner.GameR
 			selfPlayPlayer = createSelfPlayPlayer(newWeights, MINMAX_DEPTH, EPSILON)
 
 		default:
-			results, totalPositions := runner.PlayNGamesAsync(gameFactory, selfPlayPlayer, selfPlayPlayer, GAMES_PER_ITERATION)
+			results, totalPositions := runner.PlayNGamesAsync(gameFactory, selfPlayPlayer, selfPlayPlayer, GAMES_PER_ITERATION, SELFPLAY_GAMES_AT_ONCE)
 			resultsBatch := &runner.GameResultsBatch{Results: results, TotalPositions: totalPositions}
 
 			select {

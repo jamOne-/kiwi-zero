@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"math"
 	"sync"
 
 	"github.com/jamOne-/kiwi-zero/game"
@@ -43,7 +44,10 @@ func PlayGame(g game.Game, blackPlayer player.Player, whitePlayer player.Player)
 
 func PlayGameAsyncWrapper(g game.Game, blackPlayer player.Player, whitePlayer player.Player, resultChan chan *GameResult, waitGroup *sync.WaitGroup) {
 	resultChan <- PlayGame(g, blackPlayer, whitePlayer)
-	waitGroup.Done()
+
+	if waitGroup != nil {
+		waitGroup.Done()
+	}
 }
 
 func PlayNGames(newGameFactory NewGameFactory, player1 player.Player, player2 player.Player, n int) ([]*GameResult, int) {
@@ -60,18 +64,16 @@ func PlayNGames(newGameFactory NewGameFactory, player1 player.Player, player2 pl
 	return results, totalPositions
 }
 
-func PlayNGamesAsync(newGameFactory NewGameFactory, player1 player.Player, player2 player.Player, n int) ([]*GameResult, int) {
-	var waitGroup sync.WaitGroup
-	waitGroup.Add(n)
-
+func PlayNGamesAsync(newGameFactory NewGameFactory, player1 player.Player, player2 player.Player, n int, maxGamesAtOnce int) ([]*GameResult, int) {
 	resultsChan := make(chan *GameResult, n)
+	maxGamesAtOnce = int(math.Min(float64(n), float64(maxGamesAtOnce)))
+	gamesRan := 0
 
-	for i := 0; i < n; i++ {
+	for i := 0; i < maxGamesAtOnce; i++ {
 		newGame := newGameFactory()
-		go PlayGameAsyncWrapper(newGame, player1, player2, resultsChan, &waitGroup)
+		go PlayGameAsyncWrapper(newGame, player1, player2, resultsChan, nil)
+		gamesRan = maxGamesAtOnce
 	}
-
-	waitGroup.Wait()
 
 	results := make([]*GameResult, n)
 	totalPositions := 0
@@ -80,6 +82,12 @@ func PlayNGamesAsync(newGameFactory NewGameFactory, player1 player.Player, playe
 		result := <-resultsChan
 		results[i] = result
 		totalPositions += len(result.History)
+
+		if gamesRan < n {
+			newGame := newGameFactory()
+			go PlayGameAsyncWrapper(newGame, player1, player2, resultsChan, nil)
+			gamesRan += 1
+		}
 	}
 
 	return results, totalPositions
