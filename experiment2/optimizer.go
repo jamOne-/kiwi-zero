@@ -94,7 +94,7 @@ func splitResults(results []*runner.GameResult, totalPositions int) ([]game.Game
 
 		for _, position := range result.History {
 			positions[index] = position
-			winners[index] = winner
+			winners[index] = winner * float64(position.GetCurrentPlayerColor())
 			index += 1
 		}
 	}

@@ -14,7 +14,7 @@ import (
 
 type ReversiToFeaturesFn func(reversiGame *reversi.ReversiGame) *mat.VecDense
 
-var NUMBER_OF_FEATURES = 8*8 + 2 // fields + count + mobility
+var NUMBER_OF_FEATURES = 8*8 + 4 + 4 // fields + 4*count + 4*mobility
 
 func CreateWeightedReversiFn(reversiToFeaturesFn ReversiToFeaturesFn, weights *mat.VecDense) minMaxPlayer.ValueFn {
 	return func(g game.Game) float64 {
@@ -39,15 +39,17 @@ func GetInitialWeights() *mat.VecDense {
 
 func ReversiToFeatures(reversiGame *reversi.ReversiGame) *mat.VecDense {
 	features := mat.NewVecDense(NUMBER_OF_FEATURES, nil)
-	blackCount, whiteCount := 0, 0
+	currentCount, opponentCount := 0.0, 0.0
+	currentColor := reversiGame.GetCurrentPlayerColor()
+	opponentColor := currentColor * -1
 
 	for i, field := range reversiGame.Board {
-		features.SetVec(i, float64(field))
+		features.SetVec(i, float64(field*currentColor))
 
-		if field == game.BLACK {
-			blackCount += 1
-		} else if field == game.WHITE {
-			whiteCount += 1
+		if field == currentColor {
+			currentCount += 1.0
+		} else if field == opponentColor {
+			opponentCount += 1.0
 		}
 	}
 
@@ -56,23 +58,31 @@ func ReversiToFeatures(reversiGame *reversi.ReversiGame) *mat.VecDense {
 	// 	countFeature = -float64(whiteCount) / float64(blackCount+whiteCount)
 	// }
 
-	countFeature := mat.Sum(features)
-	features.SetVec(NUMBER_OF_FEATURES-2, countFeature)
+	countDifference := currentCount - opponentCount
+	countQuotient := currentCount / (currentCount + opponentCount)
 
-	currentPlayer := reversiGame.GetCurrentPlayerColor()
-	reversiGame.Turn = game.BLACK
-	blackMobility := len(reversiGame.GetPossibleMoves())
-	reversiGame.Turn = game.WHITE
-	whiteMobility := len(reversiGame.GetPossibleMoves())
-	reversiGame.Turn = currentPlayer
+	features.SetVec(64, currentCount)
+	features.SetVec(65, opponentCount)
+	features.SetVec(66, countDifference)
+	features.SetVec(67, countQuotient)
 
-	mobilityFeature := float64(blackMobility - whiteMobility)
+	currentMobility := float64(len(reversiGame.GetPossibleMoves()))
+	reversiGame.Turn = opponentColor
+	opponentMobility := float64(len(reversiGame.GetPossibleMoves()))
+	reversiGame.Turn = currentColor
+
+	mobilityDifference := currentMobility - opponentMobility
+	mobilityQuotient := currentMobility / (currentMobility + opponentMobility)
+
 	// mobilityFeature := float64(blackMobility) / float64(blackMobility+whiteMobility)
 	// if whiteMobility > blackMobility {
 	// 	mobilityFeature = -float64(whiteMobility) / float64(blackMobility+whiteMobility)
 	// }
 
-	features.SetVec(NUMBER_OF_FEATURES-1, mobilityFeature)
+	features.SetVec(68, currentMobility)
+	features.SetVec(69, opponentMobility)
+	features.SetVec(70, mobilityDifference)
+	features.SetVec(71, mobilityQuotient)
 
 	return features
 }
