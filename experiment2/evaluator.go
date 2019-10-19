@@ -25,6 +25,7 @@ func Evaluator(
 	bestWeightsChan chan *mat.VecDense,
 	gameFactory runner.NewGameFactory,
 	initialWeights *mat.VecDense,
+	reversiToFeaturesFn reversiValueFns.ReversiToFeaturesFn,
 	playersToCompareWith []*PlayerToCompare,
 	resultsDirPath string) {
 
@@ -32,7 +33,7 @@ func Evaluator(
 	EVALUATOR_GAMES := viper.GetInt("EVALUATOR_GAMES")
 	MINMAX_DEPTH := viper.GetInt("MINMAX_DEPTH")
 
-	bestPlayer := createPlayer(initialWeights, MINMAX_DEPTH)
+	bestPlayer := createPlayer(reversiToFeaturesFn, initialWeights, MINMAX_DEPTH)
 	bestPlayer_i := 0
 	evaluator_i := 1
 
@@ -41,7 +42,7 @@ func Evaluator(
 			continue
 		}
 
-		newPlayer := createPlayer(newWeights, MINMAX_DEPTH)
+		newPlayer := createPlayer(reversiToFeaturesFn, newWeights, MINMAX_DEPTH)
 		newPlayerWins := runner.ComparePlayersAsync(gameFactory, newPlayer, bestPlayer, EVALUATOR_GAMES)
 
 		fmt.Printf("Evaluator (%d): New candidate won %d/%d games vs version=%d\n", evaluator_i, newPlayerWins, EVALUATOR_GAMES, bestPlayer_i)
@@ -66,9 +67,8 @@ func Evaluator(
 	}
 }
 
-func createPlayer(weights *mat.VecDense, depth int) player.Player {
-	reversiToFeatures := reversiValueFns.ReversiToFeatures
-	valueFn := reversiValueFns.CreateWeightedReversiFn(reversiToFeatures, weights)
+func createPlayer(reversiToFeaturesFn reversiValueFns.ReversiToFeaturesFn, weights *mat.VecDense, depth int) player.Player {
+	valueFn := reversiValueFns.CreateWeightedReversiFn(reversiToFeaturesFn, weights)
 	player := minMaxPlayer.NewMinMaxPlayer(depth, valueFn)
 
 	return player

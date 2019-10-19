@@ -57,3 +57,13 @@ func SaveGameResultsToFile(gameResults []*runner.GameResult, fileName string) {
 func TimeNowString() string {
 	return strings.Replace(time.Now().String()[:19], ":", "", -1)
 }
+
+func CreateFilledVector(length int, value float64) *mat.VecDense {
+	vec := mat.NewVecDense(length, nil)
+
+	for i := 0; i < length; i++ {
+		vec.SetVec(i, value)
+	}
+
+	return vec
+}

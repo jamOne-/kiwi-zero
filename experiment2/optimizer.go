@@ -15,7 +15,12 @@ import (
 	"gonum.org/v1/gonum/mat"
 )
 
-func Optimizer(gameResultsChan chan *runner.GameResultsBatch, newWeightsChan chan *mat.VecDense, initialWeights *mat.VecDense) {
+func Optimizer(
+	gameResultsChan chan *runner.GameResultsBatch,
+	newWeightsChan chan *mat.VecDense,
+	initialWeights *mat.VecDense,
+	reversiToFeaturesFn reversiValueFns.ReversiToFeaturesFn) {
+
 	MAX_HISTORY_LENGTH := viper.GetInt("MAX_HISTORY_LENGTH")
 	TRAINING_SIZE := viper.GetInt("TRAINING_SIZE")
 	SGD_CONFIG := viper.Get("SGD_CONFIG").(map[string]float64)
@@ -31,7 +36,7 @@ func Optimizer(gameResultsChan chan *runner.GameResultsBatch, newWeightsChan cha
 		case batch := <-gameResultsChan:
 			results, totalPositions := batch.Results, batch.TotalPositions
 			positions, winners := splitResults(results, totalPositions)
-			features := createFeaturesSlice(positions)
+			features := createFeaturesSlice(reversiToFeaturesFn, positions)
 
 			gamePositions = append(gamePositions, features...)
 			gameWinners = append(gameWinners, winners...)
@@ -60,12 +65,12 @@ func Optimizer(gameResultsChan chan *runner.GameResultsBatch, newWeightsChan cha
 	}
 }
 
-func createFeaturesSlice(positions []game.Game) []*mat.VecDense {
+func createFeaturesSlice(reversiToFeaturesFn reversiValueFns.ReversiToFeaturesFn, positions []game.Game) []*mat.VecDense {
 	featuresSlice := make([]*mat.VecDense, len(positions))
 
 	for i, position := range positions {
 		reversiGame := position.(*reversi.ReversiGame)
-		featuresSlice[i] = reversiValueFns.ReversiToFeatures(reversiGame)
+		featuresSlice[i] = reversiToFeaturesFn(reversiGame)
 	}
 
 	return featuresSlice

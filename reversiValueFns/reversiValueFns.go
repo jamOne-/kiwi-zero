@@ -10,6 +10,7 @@ import (
 	"github.com/jamOne-/kiwi-zero/game"
 	"github.com/jamOne-/kiwi-zero/minMaxPlayer"
 	"github.com/jamOne-/kiwi-zero/reversi"
+	"github.com/jamOne-/kiwi-zero/utils"
 )
 
 type ReversiToFeaturesFn func(reversiGame *reversi.ReversiGame) *mat.VecDense
@@ -28,33 +29,25 @@ func CreateWeightedReversiFn(reversiToFeaturesFn ReversiToFeaturesFn, weights *m
 }
 
 func GetInitialWeights() *mat.VecDense {
-	weights := make([]float64, NUMBER_OF_FEATURES)
+	return utils.CreateFilledVector(NUMBER_OF_FEATURES, 1)
+}
 
-	for i := 0; i < NUMBER_OF_FEATURES; i++ {
-		weights[i] = 1
-	}
+func GetTriangleInitialWeights() *mat.VecDense {
+	triangleNumberOfFeatures := 4 + 3 + 2 + 1 + 2
+	return utils.CreateFilledVector(triangleNumberOfFeatures, 1)
+}
 
-	return mat.NewVecDense(NUMBER_OF_FEATURES, weights)
+func GetExtendedInitialWeights() *mat.VecDense {
+	extendedNumberOfFeatures := 8*8 + 4 + 4
+	return utils.CreateFilledVector(extendedNumberOfFeatures, 1)
 }
 
 func ReversiToFeatures(reversiGame *reversi.ReversiGame) *mat.VecDense {
 	features := mat.NewVecDense(NUMBER_OF_FEATURES, nil)
-	blackCount, whiteCount := 0, 0
 
 	for i, field := range reversiGame.Board {
 		features.SetVec(i, float64(field))
-
-		if field == game.BLACK {
-			blackCount += 1
-		} else if field == game.WHITE {
-			whiteCount += 1
-		}
 	}
-
-	// countFeature := float64(blackCount) / float64(blackCount+whiteCount)
-	// if whiteCount > blackCount {
-	// 	countFeature = -float64(whiteCount) / float64(blackCount+whiteCount)
-	// }
 
 	countFeature := mat.Sum(features)
 	features.SetVec(NUMBER_OF_FEATURES-2, countFeature)
@@ -67,11 +60,6 @@ func ReversiToFeatures(reversiGame *reversi.ReversiGame) *mat.VecDense {
 	reversiGame.Turn = currentPlayer
 
 	mobilityFeature := float64(blackMobility - whiteMobility)
-	// mobilityFeature := float64(blackMobility) / float64(blackMobility+whiteMobility)
-	// if whiteMobility > blackMobility {
-	// 	mobilityFeature = -float64(whiteMobility) / float64(blackMobility+whiteMobility)
-	// }
-
 	features.SetVec(NUMBER_OF_FEATURES-1, mobilityFeature)
 
 	return features
@@ -109,15 +97,52 @@ func ReversiToFeaturesTriangle(reversiGame *reversi.ReversiGame) *mat.VecDense {
 	return features
 }
 
-func GetTriangleInitialWeights() *mat.VecDense {
-	triangleNumberOfFeatures := 4 + 3 + 2 + 1 + 2
-	weights := make([]float64, triangleNumberOfFeatures)
+func ReversiToFeaturesExtended(reversiGame *reversi.ReversiGame) *mat.VecDense {
+	numberOfFeaturesExtended := 8*8 + 4 + 4
+	features := mat.NewVecDense(numberOfFeaturesExtended, nil)
+	blackCount, whiteCount := 0.0, 0.0
 
-	for i := 0; i < triangleNumberOfFeatures; i++ {
-		weights[i] = 1
+	for i, field := range reversiGame.Board {
+		features.SetVec(i, float64(field))
+
+		if field == game.BLACK {
+			blackCount += 1.0
+		} else if field == game.WHITE {
+			whiteCount += 1.0
+		}
 	}
 
-	return mat.NewVecDense(triangleNumberOfFeatures, weights)
+	countDifference := blackCount - whiteCount
+	countQuotient := calculateQuotient(blackCount, whiteCount)
+	features.SetVec(64, blackCount)
+	features.SetVec(65, whiteCount)
+	features.SetVec(66, countDifference)
+	features.SetVec(67, countQuotient)
+
+	currentPlayer := reversiGame.GetCurrentPlayerColor()
+	reversiGame.Turn = game.BLACK
+	blackMobility := float64(len(reversiGame.GetPossibleMoves()))
+	reversiGame.Turn = game.WHITE
+	whiteMobility := float64(len(reversiGame.GetPossibleMoves()))
+	reversiGame.Turn = currentPlayer
+
+	mobilityDifference := blackMobility - whiteMobility
+	mobilityQuotient := calculateQuotient(blackMobility, whiteMobility)
+
+	features.SetVec(68, blackMobility)
+	features.SetVec(69, whiteMobility)
+	features.SetVec(70, mobilityDifference)
+	features.SetVec(71, mobilityQuotient)
+
+	return features
+}
+
+func calculateQuotient(a float64, b float64) float64 {
+	if a > b {
+		return a / (a + b)
+	} else {
+		return -b / (a + b)
+	}
 }
 
 func SaveWeightsToFile(weights *mat.VecDense, fileName string) {

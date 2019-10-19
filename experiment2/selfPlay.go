@@ -9,7 +9,13 @@ import (
 	"gonum.org/v1/gonum/mat"
 )
 
-func SelfPlayLoop(bestWeights chan *mat.VecDense, gameResults chan *runner.GameResultsBatch, initialWeights *mat.VecDense, gameFactory runner.NewGameFactory) {
+func SelfPlayLoop(
+	bestWeights chan *mat.VecDense,
+	gameResults chan *runner.GameResultsBatch,
+	initialWeights *mat.VecDense,
+	gameFactory runner.NewGameFactory,
+	reversiToFeaturesFn reversiValueFns.ReversiToFeaturesFn) {
+
 	EPSILON := viper.GetFloat64("EPSILON")
 	GAMES_PER_ITERATION := viper.GetInt("GAMES_PER_ITERATION")
 	MINMAX_DEPTH := viper.GetInt("MINMAX_DEPTH")
@@ -19,12 +25,12 @@ func SelfPlayLoop(bestWeights chan *mat.VecDense, gameResults chan *runner.GameR
 		SELFPLAY_GAMES_AT_ONCE = GAMES_PER_ITERATION
 	}
 
-	selfPlayPlayer := createSelfPlayPlayer(initialWeights, MINMAX_DEPTH, EPSILON)
+	selfPlayPlayer := createSelfPlayPlayer(reversiToFeaturesFn, initialWeights, MINMAX_DEPTH, EPSILON)
 
 	for {
 		select {
 		case newWeights := <-bestWeights:
-			selfPlayPlayer = createSelfPlayPlayer(newWeights, MINMAX_DEPTH, EPSILON)
+			selfPlayPlayer = createSelfPlayPlayer(reversiToFeaturesFn, newWeights, MINMAX_DEPTH, EPSILON)
 
 		default:
 			results, totalPositions := runner.PlayNGamesAsync(gameFactory, selfPlayPlayer, selfPlayPlayer, GAMES_PER_ITERATION, SELFPLAY_GAMES_AT_ONCE)
@@ -40,9 +46,8 @@ func SelfPlayLoop(bestWeights chan *mat.VecDense, gameResults chan *runner.GameR
 	}
 }
 
-func createSelfPlayPlayer(weights *mat.VecDense, depth int, epsilon float64) player.Player {
-	reversiToFeatures := reversiValueFns.ReversiToFeatures
-	valueFn := reversiValueFns.CreateWeightedReversiFn(reversiToFeatures, weights)
+func createSelfPlayPlayer(reversiToFeaturesFn reversiValueFns.ReversiToFeaturesFn, weights *mat.VecDense, depth int, epsilon float64) player.Player {
+	valueFn := reversiValueFns.CreateWeightedReversiFn(reversiToFeaturesFn, weights)
 	selfPlayPlayer := minMaxPlayer.NewEpsilonGreedyMinMaxPlayer(depth, epsilon, valueFn)
 
 	return selfPlayPlayer

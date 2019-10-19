@@ -23,9 +23,15 @@ import (
 	"gonum.org/v1/gonum/mat"
 )
 
+var INITIAL_WEIGHTS_BY_MODE = map[string](func() *mat.VecDense){
+	"normal":   reversiValueFns.GetInitialWeights,
+	"triangle": reversiValueFns.GetTriangleInitialWeights,
+	"extended": reversiValueFns.GetExtendedInitialWeights}
+
 var REVERSI_TO_FEATURES_BY_MODE = map[string]reversiValueFns.ReversiToFeaturesFn{
 	"normal":   reversiValueFns.ReversiToFeatures,
-	"triangle": reversiValueFns.ReversiToFeaturesTriangle}
+	"triangle": reversiValueFns.ReversiToFeaturesTriangle,
+	"extended": reversiValueFns.ReversiToFeaturesExtended}
 
 func main() {
 	rand.Seed(time.Now().UnixNano())
@@ -37,12 +43,13 @@ func main() {
 	OLD_MINMAX_WEIGHTS_PATH := viper.GetString("OLD_MINMAX_WEIGHTS_PATH")
 	OLD_MINMAX_WEIGHTS_MODE := viper.GetString("OLD_MINMAX_WEIGHTS_MODE")
 	RESULTS_DIR_NAME := viper.GetString("RESULTS_DIR_NAME")
+	TRAINING_MODE := viper.GetString("TRAINING_MODE")
 
 	resultsDirPath := createResultsDir(RESULTS_DIR_NAME)
 	configPath := path.Join(resultsDirPath, "config.yaml")
 	viper.WriteConfigAs(configPath)
 
-	initialWeights := reversiValueFns.GetInitialWeights()
+	initialWeights := INITIAL_WEIGHTS_BY_MODE[TRAINING_MODE]()
 	if INITIAL_WEIGHTS_PATH != "" {
 		initialWeights = reversiValueFns.LoadWeightsFromFile(INITIAL_WEIGHTS_PATH)
 	}
@@ -63,10 +70,11 @@ func main() {
 	bestWeightsChan := make(chan *mat.VecDense)
 	gameResultsChan := make(chan *runner.GameResultsBatch)
 	newWeightsChan := make(chan *mat.VecDense)
+	reversiToFeaturesFn := REVERSI_TO_FEATURES_BY_MODE[TRAINING_MODE]
 
-	go SelfPlayLoop(bestWeightsChan, gameResultsChan, initialWeights, reversiGameFactory)
-	go Optimizer(gameResultsChan, newWeightsChan, initialWeights)
-	go Evaluator(newWeightsChan, bestWeightsChan, reversiGameFactory, initialWeights, playersToCompareWith, resultsDirPath)
+	go SelfPlayLoop(bestWeightsChan, gameResultsChan, initialWeights, reversiGameFactory, reversiToFeaturesFn)
+	go Optimizer(gameResultsChan, newWeightsChan, initialWeights, reversiToFeaturesFn)
+	go Evaluator(newWeightsChan, bestWeightsChan, reversiGameFactory, initialWeights, reversiToFeaturesFn, playersToCompareWith, resultsDirPath)
 
 	var waitGroup sync.WaitGroup
 	waitGroup.Add(1)
