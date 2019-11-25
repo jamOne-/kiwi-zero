@@ -9,16 +9,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jamOne-/kiwi-zero/utils"
-
 	"github.com/jamOne-/kiwi-zero/game"
 	"github.com/jamOne-/kiwi-zero/minMaxPlayer"
-	"github.com/jamOne-/kiwi-zero/reversi"
-
 	"github.com/jamOne-/kiwi-zero/monteCarloTreeSearchPlayer"
-
+	"github.com/jamOne-/kiwi-zero/reversi"
 	"github.com/jamOne-/kiwi-zero/reversiValueFns"
 	"github.com/jamOne-/kiwi-zero/runner"
+	"github.com/jamOne-/kiwi-zero/utils"
+
 	"github.com/spf13/viper"
 	"gonum.org/v1/gonum/mat"
 )
