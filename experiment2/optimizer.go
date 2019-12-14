@@ -1,8 +1,13 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"math/rand"
+	"os/exec"
+	"strconv"
+	"strings"
 
 	"github.com/spf13/viper"
 
@@ -10,11 +15,15 @@ import (
 	"github.com/jamOne-/kiwi-zero/reversi"
 	"github.com/jamOne-/kiwi-zero/reversiValueFns"
 	"github.com/jamOne-/kiwi-zero/runner"
-	"github.com/jamOne-/kiwi-zero/sgd"
 	"github.com/jamOne-/kiwi-zero/utils"
 
 	"gonum.org/v1/gonum/mat"
 )
+
+type trainingParams struct {
+	Xs []*mat.VecDense
+	ys []float64
+}
 
 func Optimizer(
 	gameResultsChan chan *runner.GameResultsBatch,
@@ -28,11 +37,29 @@ func Optimizer(
 	TRAINING_TRANSFORM_POSITIONS := viper.GetBool("TRAINING_TRANSFORM_POSITIONS")
 	SGD_CONFIG := viper.Get("SGD_CONFIG").(map[string]float64)
 
-	bestWeights := initialWeights
+	// bestWeights := initialWeights
 	gamePositions := make([]*mat.VecDense, 0)
 	gameWinners := make([]float64, 0)
 
-	training_i := 1
+	pythonOptimizerCmd := exec.Command(
+		"python", "../python/optimizer/optimizer.py",
+		"--weights", strconv.Itoa(initialWeights.Len()),
+		"--learning_rate", fmt.Sprintf("%f", SGD_CONFIG["alpha0"]),
+		"--epochs", strconv.Itoa(int(SGD_CONFIG["max_epochs"])),
+		"--batch_size", strconv.Itoa(int(SGD_CONFIG["batch_size"])))
+
+	fmt.Println("Args: " + strings.Join(pythonOptimizerCmd.Args, " "))
+
+	optimizerIn, _ := pythonOptimizerCmd.StdinPipe()
+	optimizerOut, _ := pythonOptimizerCmd.StdoutPipe()
+
+	trainingChan := make(chan *trainingParams)
+	go trainer(trainingChan, optimizerIn, optimizerOut, newWeightsChan)
+	// go optimizerReader(optimizerOut, newWeightsChan)
+	// go echoReader(optimizerOut)
+	pythonOptimizerCmd.Start()
+
+	// training_i := 1
 
 	for {
 		select {
@@ -48,6 +75,9 @@ func Optimizer(
 				flipPositionsColors(TRAINING_FLIP_POSITIONS_PROB, positions, winners)
 			}
 
+			// transform -1, 0, 1 winners to black winning probability
+			transformWinnersToProbabilities(winners)
+
 			features := createFeaturesSlice(reversiToFeaturesFn, positions)
 
 			gamePositions = append(gamePositions, features...)
@@ -60,20 +90,23 @@ func Optimizer(
 			}
 
 			Xs, ys := chooseXsAndys(gamePositions, gameWinners, TRAINING_SIZE)
-			sgdResult := sgd.SGD(sgd.MeanSquaredErrorWithGradient, bestWeights, Xs, ys, SGD_CONFIG)
-			bestWeights = sgdResult.BestWeights
-
-			fmt.Printf("Optimizer (%d): totalEpochs=%d, bestEpoch=%d, testSetError=%.2f, validationSetError=%.2f, trainingError=%.2f\n", training_i, sgdResult.TotalEpochs, sgdResult.BestWeightsEpoch, sgdResult.TestSetErrorRate, sgdResult.BestValidErrorRate, sgdResult.TrainErrorsHistory[len(sgdResult.TrainErrorsHistory)-1])
-			training_i += 1
+			params := &trainingParams{Xs, ys}
 
 			select {
-			case newWeightsChan <- bestWeights:
+			case trainingChan <- params:
 				// try to send
 
 			default:
 				// else skip
 			}
 		}
+	}
+}
+
+func transformWinnersToProbabilities(winners []float64) {
+	for i, winner := range winners {
+		blackWinProb := (winner + 1) / 2
+		winners[i] = blackWinProb
 	}
 }
 
@@ -107,7 +140,7 @@ func splitResults(results []*runner.GameResult, totalPositions int) ([]game.Game
 
 	index := 0
 	for _, result := range results {
-		winner := float64(result.Winner) * 100.0
+		winner := float64(result.Winner)
 
 		for _, position := range result.History {
 			positions[index] = position
@@ -155,7 +188,8 @@ func flipPositionsColors(flipProb float64, positions []game.Game, winners []floa
 	for i, position := range positions {
 		if rand.Float64() < flipProb {
 			flipGameColors(position)
-			winners[i] *= -1
+			winners[i] = 1.0 - winners[i]
+			// winners[i] *= -1
 		}
 	}
 }
@@ -166,5 +200,59 @@ func flipGameColors(g game.Game) {
 
 	for i, color := range reversiGame.Board {
 		reversiGame.Board[i] = color * -1
+	}
+}
+
+func parseWeights(weightsString string) *mat.VecDense {
+	splitted := strings.Split(weightsString, " ")
+	weights := mat.NewVecDense(len(splitted), nil)
+
+	for i, s := range splitted {
+		weight, _ := strconv.ParseFloat(s, 64)
+		weights.SetVec(i, weight)
+	}
+
+	return weights
+}
+
+func trainer(paramsChan chan *trainingParams, optimizerIn io.WriteCloser, optimizerOut io.ReadCloser, newWeightsChan chan *mat.VecDense) {
+	optimizerOutReader := bufio.NewReader(optimizerOut)
+	training_i := 1
+
+	for params := range paramsChan {
+		Xs, ys := params.Xs, params.ys
+
+		optimizerIn.Write([]byte(fmt.Sprintf("%v\n", len(ys))))
+
+		for _, X := range Xs {
+			line := utils.FloatsToString(X.RawVector().Data) + "\n"
+			optimizerIn.Write([]byte(line))
+		}
+
+		for _, y := range ys {
+			line := fmt.Sprintf("%v\n", y)
+			optimizerIn.Write([]byte(line))
+		}
+
+		// fmt.Printf("Optimizer (%d): training...\n", training_i)
+
+		trainingSummary, _ := optimizerOutReader.ReadString('\n')
+		newWeightsString, _ := optimizerOutReader.ReadString('\n')
+		newWeights := parseWeights(newWeightsString)
+		fmt.Printf("Optimizer (%d): %s", training_i, trainingSummary)
+		training_i += 1
+
+		select {
+		case newWeightsChan <- newWeights:
+			// try to send
+
+		default:
+			// else skip
+		}
+
+		// sgdResult := sgd.SGD(sgd.MeanSquaredErrorWithGradient, bestWeights, Xs, ys, SGD_CONFIG)
+		// bestWeights = sgdResult.BestWeights
+
+		// fmt.Printf("Optimizer (%d): totalEpochs=%d, bestEpoch=%d, testSetError=%.2f, validationSetError=%.2f, trainingError=%.2f\n", training_i, sgdResult.TotalEpochs, sgdResult.BestWeightsEpoch, sgdResult.TestSetErrorRate, sgdResult.BestValidErrorRate, sgdResult.TrainErrorsHistory[len(sgdResult.TrainErrorsHistory)-1])
 	}
 }

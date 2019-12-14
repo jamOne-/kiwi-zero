@@ -3,6 +3,7 @@ package reversiValueFns
 import (
 	"fmt"
 	"io"
+	"math"
 	"os"
 
 	"gonum.org/v1/gonum/mat"
@@ -23,8 +24,11 @@ func CreateWeightedReversiFn(reversiToFeaturesFn ReversiToFeaturesFn, weights *m
 
 		features := reversiToFeaturesFn(reversiGame)
 		totalScore := mat.Dot(features, weights)
+		afterSigmoid := 1.0 / (1 + math.Exp(-totalScore))
 
-		return totalScore
+		finalValue := afterSigmoid*2.0 - 1.0
+
+		return finalValue
 	}
 }
 

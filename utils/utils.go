@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -133,4 +134,14 @@ func PerformSymmetryVector4(vec []int8) {
 			vec[i1], vec[i2] = vec[i2], vec[i1]
 		}
 	}
+}
+
+func FloatsToString(xs []float64) string {
+	xs_string := make([]string, len(xs))
+
+	for i, x := range xs {
+		xs_string[i] = strconv.FormatFloat(x, 'f', -1, 64)
+	}
+
+	return strings.Join(xs_string, " ")
 }
