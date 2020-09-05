@@ -67,14 +67,13 @@ func PlayNGames(newGameFactory NewGameFactory, player1 player.Player, player2 pl
 func PlayNGamesAsync(newGameFactory NewGameFactory, player1 player.Player, player2 player.Player, n int, maxGamesAtOnce int) ([]*GameResult, int) {
 	resultsChan := make(chan *GameResult, n)
 	maxGamesAtOnce = int(math.Min(float64(n), float64(maxGamesAtOnce)))
-	gamesRan := 0
 
 	for i := 0; i < maxGamesAtOnce; i++ {
 		newGame := newGameFactory()
 		go PlayGameAsyncWrapper(newGame, player1, player2, resultsChan, nil)
-		gamesRan = maxGamesAtOnce
 	}
-
+	
+	gamesRan := maxGamesAtOnce
 	results := make([]*GameResult, n)
 	totalPositions := 0
 

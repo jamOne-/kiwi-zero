@@ -47,7 +47,7 @@ func Evaluator(
 
 		fmt.Printf("Evaluator (%d): New candidate won %d/%d games vs version=%d\n", evaluator_i, newPlayerWins, EVALUATOR_GAMES, bestPlayer_i)
 
-		if float64(newPlayerWins)/float64(EVALUATOR_GAMES) > 0.5 {
+		if float64(newPlayerWins)/float64(EVALUATOR_GAMES) >= 0.55 {
 			bestPlayer = newPlayer
 			bestPlayer_i = evaluator_i
 			bestWeightsChan <- newWeights
