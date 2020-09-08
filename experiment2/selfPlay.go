@@ -1,6 +1,9 @@
 package main
 
 import (
+	"fmt"
+
+	"github.com/jamOne-/kiwi-zero/game"
 	"github.com/jamOne-/kiwi-zero/minMaxPlayer"
 	"github.com/jamOne-/kiwi-zero/player"
 	"github.com/jamOne-/kiwi-zero/reversiValueFns"
@@ -14,8 +17,8 @@ func SelfPlayLoop(
 	gameResults chan *runner.GameResultsBatch,
 	initialWeights *mat.VecDense,
 	gameFactory runner.NewGameFactory,
-	reversiToFeaturesFn reversiValueFns.ReversiToFeaturesFn) {
-
+	gameToFeaturesFn game.GameToFeaturesFn,
+) {
 	EPSILON := viper.GetFloat64("EPSILON")
 	GAMES_PER_ITERATION := viper.GetInt("GAMES_PER_ITERATION")
 	MINMAX_DEPTH := viper.GetInt("MINMAX_DEPTH")
@@ -25,15 +28,27 @@ func SelfPlayLoop(
 		SELFPLAY_GAMES_AT_ONCE = GAMES_PER_ITERATION
 	}
 
-	selfPlayPlayer := createSelfPlayPlayer(reversiToFeaturesFn, initialWeights, MINMAX_DEPTH, EPSILON)
+	selfPlay_i := 1
+	selfPlayPlayer := createSelfPlayPlayer(gameToFeaturesFn, initialWeights, MINMAX_DEPTH, EPSILON)
 
 	for {
 		select {
 		case newWeights := <-bestWeights:
-			selfPlayPlayer = createSelfPlayPlayer(reversiToFeaturesFn, newWeights, MINMAX_DEPTH, EPSILON)
+			selfPlayPlayer = createSelfPlayPlayer(gameToFeaturesFn, newWeights, MINMAX_DEPTH, EPSILON)
 
 		default:
-			results, totalPositions := runner.PlayNGamesAsync(gameFactory, selfPlayPlayer, selfPlayPlayer, GAMES_PER_ITERATION, SELFPLAY_GAMES_AT_ONCE)
+			results, totalPositions := runner.PlayNGamesAsync(
+				gameFactory,
+				gameToFeaturesFn,
+				selfPlayPlayer,
+				selfPlayPlayer,
+				GAMES_PER_ITERATION,
+				SELFPLAY_GAMES_AT_ONCE,
+			)
+
+			fmt.Printf("Selfplay (%d): finished %d games", selfPlay_i, GAMES_PER_ITERATION)
+
+			selfPlay_i += 1
 			resultsBatch := &runner.GameResultsBatch{Results: results, TotalPositions: totalPositions}
 
 			select {
@@ -46,8 +61,13 @@ func SelfPlayLoop(
 	}
 }
 
-func createSelfPlayPlayer(reversiToFeaturesFn reversiValueFns.ReversiToFeaturesFn, weights *mat.VecDense, depth int, epsilon float64) player.Player {
-	valueFn := reversiValueFns.CreateWeightedReversiFn(reversiToFeaturesFn, weights)
+func createSelfPlayPlayer(
+	gameToFeaturesFn game.GameToFeaturesFn,
+	weights *mat.VecDense,
+	depth int,
+	epsilon float64,
+) player.Player {
+	valueFn := reversiValueFns.CreateWeightedReversiFn(gameToFeaturesFn, weights)
 	selfPlayPlayer := minMaxPlayer.NewEpsilonGreedyMinMaxPlayer(depth, epsilon, valueFn)
 
 	return selfPlayPlayer

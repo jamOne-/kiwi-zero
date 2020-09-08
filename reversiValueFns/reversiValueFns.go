@@ -14,15 +14,11 @@ import (
 	"github.com/jamOne-/kiwi-zero/utils"
 )
 
-type ReversiToFeaturesFn func(reversiGame *reversi.ReversiGame) *mat.VecDense
-
 var NUMBER_OF_FEATURES = 8*8 + 2 // fields + count + mobility
 
-func CreateWeightedReversiFn(reversiToFeaturesFn ReversiToFeaturesFn, weights *mat.VecDense) minMaxPlayer.ValueFn {
+func CreateWeightedReversiFn(gameToFeaturesFn game.GameToFeaturesFn, weights *mat.VecDense) minMaxPlayer.ValueFn {
 	return func(g game.Game) float64 {
-		reversiGame := g.(*reversi.ReversiGame) // nieładnie, ale brak generyków to jest jakiś dramat
-
-		features := reversiToFeaturesFn(reversiGame)
+		features := gameToFeaturesFn(g)
 		totalScore := mat.Dot(features, weights)
 		afterSigmoid := 1.0 / (1 + math.Exp(-totalScore))
 
@@ -44,6 +40,13 @@ func GetTriangleInitialWeights() *mat.VecDense {
 func GetExtendedInitialWeights() *mat.VecDense {
 	extendedNumberOfFeatures := 8*8 + 4 + 4
 	return utils.CreateFilledVector(extendedNumberOfFeatures, 1)
+}
+
+func ConvertToReversiFn(reversiFn func(reversiGame *reversi.ReversiGame) *mat.VecDense) game.GameToFeaturesFn {
+	return func(g game.Game) *mat.VecDense {
+		reversiGame := g.(*reversi.ReversiGame)
+		return reversiFn(reversiGame)
+	}
 }
 
 func ReversiToFeatures(reversiGame *reversi.ReversiGame) *mat.VecDense {

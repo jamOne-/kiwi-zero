@@ -13,7 +13,6 @@ import (
 
 	"github.com/jamOne-/kiwi-zero/game"
 	"github.com/jamOne-/kiwi-zero/reversi"
-	"github.com/jamOne-/kiwi-zero/reversiValueFns"
 	"github.com/jamOne-/kiwi-zero/runner"
 	"github.com/jamOne-/kiwi-zero/utils"
 
@@ -21,24 +20,25 @@ import (
 )
 
 type trainingParams struct {
-	Xs []*mat.VecDense
+	Xs []game.Features
 	ys []float64
 }
 
 func Optimizer(
 	gameResultsChan chan *runner.GameResultsBatch,
-	newWeightsChan chan *mat.VecDense,
-	initialWeights *mat.VecDense,
-	reversiToFeaturesFn reversiValueFns.ReversiToFeaturesFn) {
+	newWeightsChan chan game.Features,
+	initialWeights game.Features,
+	gameToFeaturesFn game.GameToFeaturesFn,
+) {
 
 	MAX_HISTORY_LENGTH := viper.GetInt("MAX_HISTORY_LENGTH")
 	TRAINING_SIZE := viper.GetInt("TRAINING_SIZE")
-	TRAINING_FLIP_POSITIONS_PROB := viper.GetFloat64("TRAINING_FLIP_POSITIONS_PROB")
-	TRAINING_TRANSFORM_POSITIONS := viper.GetBool("TRAINING_TRANSFORM_POSITIONS")
+	// TRAINING_FLIP_POSITIONS_PROB := viper.GetFloat64("TRAINING_FLIP_POSITIONS_PROB")
+	// TRAINING_TRANSFORM_POSITIONS := viper.GetBool("TRAINING_TRANSFORM_POSITIONS")
 	SGD_CONFIG := viper.Get("SGD_CONFIG").(map[string]float64)
 
 	// bestWeights := initialWeights
-	gamePositions := make([]*mat.VecDense, 0)
+	gameFeatures := make([]game.Features, 0)
 	gameWinners := make([]float64, 0)
 
 	pythonOptimizerCmd := exec.Command(
@@ -65,31 +65,31 @@ func Optimizer(
 		select {
 		case batch := <-gameResultsChan:
 			results, totalPositions := batch.Results, batch.TotalPositions
-			positions, winners := splitResults(results, totalPositions)
+			features, winners := splitResults(results, totalPositions)
 
-			if TRAINING_TRANSFORM_POSITIONS {
-				transformPositions(positions)
-			}
+			// if TRAINING_TRANSFORM_POSITIONS {
+			// 	transformPositions(positions)
+			// }
 
-			if TRAINING_FLIP_POSITIONS_PROB > 0 {
-				flipPositionsColors(TRAINING_FLIP_POSITIONS_PROB, positions, winners)
-			}
+			// if TRAINING_FLIP_POSITIONS_PROB > 0 {
+			// 	flipPositionsColors(TRAINING_FLIP_POSITIONS_PROB, positions, winners)
+			// }
 
 			// transform -1, 0, 1 winners to black winning probability
 			transformWinnersToProbabilities(winners)
 
-			features := createFeaturesSlice(reversiToFeaturesFn, positions)
+			// features := createFeaturesSlice(reversiToFeaturesFn, positions)
 
-			gamePositions = append(gamePositions, features...)
+			gameFeatures = append(gameFeatures, features...)
 			gameWinners = append(gameWinners, winners...)
 
-			if len(gamePositions) > MAX_HISTORY_LENGTH {
-				startIndex := len(gamePositions) - MAX_HISTORY_LENGTH
-				gamePositions = gamePositions[startIndex:]
+			if len(gameFeatures) > MAX_HISTORY_LENGTH {
+				startIndex := len(gameFeatures) - MAX_HISTORY_LENGTH
+				gameFeatures = gameFeatures[startIndex:]
 				gameWinners = gameWinners[startIndex:]
 			}
 
-			Xs, ys := chooseXsAndys(gamePositions, gameWinners, TRAINING_SIZE)
+			Xs, ys := chooseXsAndys(gameFeatures, gameWinners, TRAINING_SIZE)
 			params := &trainingParams{Xs, ys}
 
 			select {
@@ -110,19 +110,19 @@ func transformWinnersToProbabilities(winners []float64) {
 	}
 }
 
-func createFeaturesSlice(reversiToFeaturesFn reversiValueFns.ReversiToFeaturesFn, positions []game.Game) []*mat.VecDense {
-	featuresSlice := make([]*mat.VecDense, len(positions))
+// func createFeaturesSlice(reversiToFeaturesFn reversiValueFns.ReversiToFeaturesFn, positions []game.Game) []Features {
+// 	featuresSlice := make([]Features, len(positions))
 
-	for i, position := range positions {
-		reversiGame := position.(*reversi.ReversiGame)
-		featuresSlice[i] = reversiToFeaturesFn(reversiGame)
-	}
+// 	for i, position := range positions {
+// 		reversiGame := position.(*reversi.ReversiGame)
+// 		featuresSlice[i] = reversiToFeaturesFn(reversiGame)
+// 	}
 
-	return featuresSlice
-}
+// 	return featuresSlice
+// }
 
-func chooseXsAndys(XsSource []*mat.VecDense, ysSource []float64, N int) ([]*mat.VecDense, []float64) {
-	Xs := make([]*mat.VecDense, N)
+func chooseXsAndys(XsSource []game.Features, ysSource []float64, N int) ([]game.Features, []float64) {
+	Xs := make([]game.Features, N)
 	ys := make([]float64, N)
 
 	for i := 0; i < N; i++ {
@@ -134,22 +134,22 @@ func chooseXsAndys(XsSource []*mat.VecDense, ysSource []float64, N int) ([]*mat.
 	return Xs, ys
 }
 
-func splitResults(results []*runner.GameResult, totalPositions int) ([]game.Game, []float64) {
-	positions := make([]game.Game, totalPositions)
+func splitResults(results []*runner.GameResult, totalPositions int) ([]game.Features, []float64) {
+	featuresList := make([]game.Features, totalPositions)
 	winners := make([]float64, totalPositions)
 
 	index := 0
 	for _, result := range results {
 		winner := float64(result.Winner)
 
-		for _, position := range result.History {
-			positions[index] = position
+		for _, features := range result.FeaturesList {
+			featuresList[index] = features
 			winners[index] = winner
 			index += 1
 		}
 	}
 
-	return positions, winners
+	return featuresList, winners
 }
 
 func randomPositionTransformation(position game.Game) {
@@ -203,7 +203,7 @@ func flipGameColors(g game.Game) {
 	}
 }
 
-func parseWeights(weightsString string) *mat.VecDense {
+func parseWeights(weightsString string) game.Features {
 	splitted := strings.Split(weightsString, " ")
 	weights := mat.NewVecDense(len(splitted), nil)
 
@@ -215,7 +215,12 @@ func parseWeights(weightsString string) *mat.VecDense {
 	return weights
 }
 
-func trainer(paramsChan chan *trainingParams, optimizerIn io.WriteCloser, optimizerOut io.ReadCloser, newWeightsChan chan *mat.VecDense) {
+func trainer(
+	paramsChan chan *trainingParams,
+	optimizerIn io.WriteCloser,
+	optimizerOut io.ReadCloser,
+	newWeightsChan chan game.Features,
+) {
 	optimizerOutReader := bufio.NewReader(optimizerOut)
 	training_i := 1
 

@@ -11,7 +11,12 @@ import (
 type ReversiGame struct {
 	Turn    game.PlayerColor
 	Board   []game.Field
-	History []game.Move
+	History []*ReversiGameHistoryItem
+}
+
+type ReversiGameHistoryItem struct {
+	Move   game.Move
+	Killed []game.Field
 }
 
 const BOARD_SIZE = 8
@@ -19,6 +24,7 @@ const TOTAL_SIZE = BOARD_SIZE * BOARD_SIZE
 const EMPTY = game.Field(0)
 const WHITE = game.Field(-1)
 const BLACK = game.Field(1)
+const PASS_MOVE = -1
 
 func getYX(field game.Field) (int8, int8) {
 	return field / BOARD_SIZE, field % BOARD_SIZE
@@ -31,7 +37,7 @@ func yXToField(y int8, x int8) game.Field {
 func NewReversiGame() *ReversiGame {
 	turn := BLACK
 	board := make([]game.Field, TOTAL_SIZE)
-	history := make([]game.Move, 0, TOTAL_SIZE)
+	history := make([]*ReversiGameHistoryItem, 0, TOTAL_SIZE)
 	board[yXToField(3, 3)], board[yXToField(4, 4)] = WHITE, WHITE
 	board[yXToField(3, 4)], board[yXToField(4, 3)] = BLACK, BLACK
 
@@ -41,7 +47,7 @@ func NewReversiGame() *ReversiGame {
 func (reversiGame *ReversiGame) Copy() game.Game {
 	turn := reversiGame.Turn
 	board := make([]game.Field, TOTAL_SIZE)
-	history := make([]game.Move, len(reversiGame.History), cap(reversiGame.History))
+	history := make([]*ReversiGameHistoryItem, len(reversiGame.History), cap(reversiGame.History))
 	copy(board, reversiGame.Board)
 	copy(history, reversiGame.History)
 
@@ -50,23 +56,27 @@ func (reversiGame *ReversiGame) Copy() game.Game {
 
 func (reversiGame *ReversiGame) MakeMove(move game.Move) (bool, game.PlayerColor) {
 	currentPlayer := reversiGame.Turn
-	reversiGame.Turn *= -1
-	reversiGame.History = append(reversiGame.History, move)
+	killed := make([]game.Field, 0)
 
-	if move != -1 {
+	if move != PASS_MOVE {
 		reversiGame.Board[move] = currentPlayer
+		killed = getKilledPawns(reversiGame.Board, move, currentPlayer)
 
-		for _, field := range getKilledPawns(reversiGame.Board, move, currentPlayer) {
+		for _, field := range killed {
 			reversiGame.Board[field] = currentPlayer
 		}
 	}
+
+	historyItem := &ReversiGameHistoryItem{move, killed}
+	reversiGame.History = append(reversiGame.History, historyItem)
+	reversiGame.Turn *= -1
 
 	return reversiGame.IsGameFinished()
 }
 
 func (reversiGame *ReversiGame) GetPossibleMoves() []game.Move {
 	result := make([]game.Field, 0, 8)
-	result = append(result, -1)
+	result = append(result, PASS_MOVE)
 
 	for field := int8(0); field < TOTAL_SIZE; field++ {
 		if reversiGame.Board[field] == EMPTY && len(getKilledPawns(reversiGame.Board, field, reversiGame.Turn)) > 0 {
@@ -77,13 +87,30 @@ func (reversiGame *ReversiGame) GetPossibleMoves() []game.Move {
 	return result
 }
 
+func (reversiGame *ReversiGame) UndoLastMove() {
+	historyLen := len(reversiGame.History)
+	historyItem := reversiGame.History[historyLen-1]
+	move, killed := historyItem.Move, historyItem.Killed
+
+	if move != PASS_MOVE {
+		reversiGame.Board[move] = EMPTY
+
+		for _, field := range killed {
+			reversiGame.Board[field] *= -1
+		}
+	}
+
+	reversiGame.History = reversiGame.History[:historyLen-1]
+	reversiGame.Turn *= -1
+}
+
 func (reversiGame *ReversiGame) GetCurrentPlayerColor() game.PlayerColor {
 	return reversiGame.Turn
 }
 
 func (reversiGame *ReversiGame) IsGameFinished() (bool, game.PlayerColor) {
 	turns := len(reversiGame.History)
-	if turns < 2 || reversiGame.History[turns-2] != -1 || reversiGame.History[turns-1] != -1 {
+	if turns < 2 || reversiGame.History[turns-2].Move != PASS_MOVE || reversiGame.History[turns-1].Move != PASS_MOVE {
 		currentPlayerMoves := reversiGame.GetPossibleMoves()
 
 		if len(currentPlayerMoves) > 1 {

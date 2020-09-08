@@ -38,11 +38,12 @@ func negaMax(valueFn ValueFn, g game.Game, depth int, a float64, b float64) (flo
 	bestValue, bestMoves := -INFINITY, []game.Move{game.Move(-1)}
 
 	for _, move := range moves {
-		gameCopy := g.Copy()
-		gameCopy.MakeMove(move)
+		g.MakeMove(move)
 
-		value, _ := negaMax(valueFn, gameCopy, depth-1, -b, -a)
+		value, _ := negaMax(valueFn, g, depth-1, -b, -a)
 		value = -value
+
+		g.UndoLastMove()
 
 		if value > bestValue {
 			bestValue = value

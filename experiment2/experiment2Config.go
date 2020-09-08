@@ -20,7 +20,8 @@ func initConfig() {
 	viper.SetDefault("TRAINING_SIZE", 512)
 	viper.SetDefault("TRAINING_TRANSFORM_POSITIONS", true)
 	// viper.SetDefault("OLD_MINMAX_WEIGHTS_PATH", "../experiment1/weights_2019-10-10 231145.txt")
-	viper.SetDefault("OLD_MINMAX_WEIGHTS_PATH", "./results/2019-12-14 151304/100_weights.txt")
+	// viper.SetDefault("OLD_MINMAX_WEIGHTS_PATH", "./results/2019-12-14 151304/100_weights.txt")
+	viper.SetDefault("OLD_MINMAX_WEIGHTS_PATH", "./results/2020-08-22 213519/1200_weights.txt")
 	// viper.SetDefault("OLD_MINMAX_WEIGHTS_MODE", "triangle")
 	viper.SetDefault("OLD_MINMAX_WEIGHTS_MODE", "extended")
 
@@ -29,7 +30,7 @@ func initConfig() {
 		"alphaConst":    1e-5,
 		"momentum":      0.9,
 		"batch_size":    16,
-		"max_epochs":    1000,
+		"max_epochs":    500,
 		"weights_decay": 0,
 		"debug":         0})
 }

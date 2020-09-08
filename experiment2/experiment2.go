@@ -26,10 +26,10 @@ var INITIAL_WEIGHTS_BY_MODE = map[string](func() *mat.VecDense){
 	"triangle": reversiValueFns.GetTriangleInitialWeights,
 	"extended": reversiValueFns.GetExtendedInitialWeights}
 
-var REVERSI_TO_FEATURES_BY_MODE = map[string]reversiValueFns.ReversiToFeaturesFn{
-	"normal":   reversiValueFns.ReversiToFeatures,
-	"triangle": reversiValueFns.ReversiToFeaturesTriangle,
-	"extended": reversiValueFns.ReversiToFeaturesExtended}
+var REVERSI_TO_FEATURES_BY_MODE = map[string]game.GameToFeaturesFn{
+	"normal":   reversiValueFns.ConvertToReversiFn(reversiValueFns.ReversiToFeatures),
+	"triangle": reversiValueFns.ConvertToReversiFn(reversiValueFns.ReversiToFeaturesTriangle),
+	"extended": reversiValueFns.ConvertToReversiFn(reversiValueFns.ReversiToFeaturesExtended)}
 
 func main() {
 	rand.Seed(time.Now().UnixNano())
