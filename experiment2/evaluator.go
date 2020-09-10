@@ -28,14 +28,19 @@ func Evaluator(
 	initialWeights *mat.VecDense,
 	gameToFeaturesFn game.GameToFeaturesFn,
 	playersToCompareWith []*PlayerToCompare,
-	resultsDirPath string) {
+	resultsDirPath string,
+) {
 
 	CHECKPOINT_EVERY := viper.GetInt("CHECKPOINT_EVERY")
 	EVALUATOR_GAMES := viper.GetInt("EVALUATOR_GAMES")
+	EVALUATOR_GAMES_AT_ONCE := viper.GetInt("EVALUATOR_GAMES_AT_ONCE")
+	MAX_BEST_PLAYERS_POOL_LENGTH := viper.GetInt("MAX_BEST_PLAYERS_POOL_LENGTH")
 	MINMAX_DEPTH := viper.GetInt("MINMAX_DEPTH")
 
 	bestPlayer := createPlayer(gameToFeaturesFn, initialWeights, MINMAX_DEPTH)
-	bestPlayer_i := 0
+	bestPlayersPool := []player.Player{bestPlayer}
+
+	// bestPlayer_i := 0
 	evaluator_i := 1
 
 	for newWeights := range newWeightsChan {
@@ -44,13 +49,22 @@ func Evaluator(
 		}
 
 		newPlayer := createPlayer(gameToFeaturesFn, newWeights, MINMAX_DEPTH)
-		newPlayerWins := runner.ComparePlayersAsync(gameFactory, newPlayer, bestPlayer, EVALUATOR_GAMES)
+		newPlayerWins := runner.ComparePlayersAsync(gameFactory, newPlayer, bestPlayer, EVALUATOR_GAMES, EVALUATOR_GAMES_AT_ONCE)
+		// newPlayerWins := runner.ComparePlayerWithOthersAsync(gameFactory, newPlayer, bestPlayersPool, EVALUATOR_GAMES)
 
-		fmt.Printf("Evaluator (%d): New candidate won %d/%d games vs version=%d\n", evaluator_i, newPlayerWins, EVALUATOR_GAMES, bestPlayer_i)
+		fmt.Printf("Evaluator (%d): New candidate won %d/%d games\n", evaluator_i, newPlayerWins, EVALUATOR_GAMES)
 
 		if float64(newPlayerWins)/float64(EVALUATOR_GAMES) >= 0.55 {
+			fmt.Printf("Evaluator (%d): 🎉 New candidate is the new best player 🎉\n", evaluator_i)
+
 			bestPlayer = newPlayer
-			bestPlayer_i = evaluator_i
+			// bestPlayer_i = evaluator_i
+			bestPlayersPool = append(bestPlayersPool, bestPlayer)
+
+			if len(bestPlayersPool) > MAX_BEST_PLAYERS_POOL_LENGTH {
+				bestPlayersPool = bestPlayersPool[len(bestPlayersPool)-MAX_BEST_PLAYERS_POOL_LENGTH:]
+			}
+
 			bestWeightsChan <- newWeights
 		}
 
@@ -86,12 +100,14 @@ func comparePlayersAndSaveResults(
 	player1Name string,
 	player2 player.Player,
 	player2Name string,
-	numberOfGames int) {
+	numberOfGames int,
+	maxGamesAtOnce int,
+) {
 
 	resultsFile, _ := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	defer resultsFile.Close()
 
-	player1Wins := runner.ComparePlayersAsync(gameFactory, player1, player2, numberOfGames)
+	player1Wins := runner.ComparePlayersAsync(gameFactory, player1, player2, numberOfGames, maxGamesAtOnce)
 	resultsInfo := fmt.Sprintf("%s won %d/%d games versus %s\n", player1Name, player1Wins, numberOfGames, player2Name)
 	fmt.Print(resultsInfo)
 	fmt.Fprint(resultsFile, resultsInfo)
@@ -107,6 +123,7 @@ func evaluatorCheckpoint(
 
 	COMPARE_AT_CHECKPOINTS := viper.GetBool("COMPARE_AT_CHECKPOINTS")
 	COMPARE_AT_CHECKPOINTS_GAMES := viper.GetInt("COMPARE_AT_CHECKPOINTS_GAMES")
+	EVALUATOR_GAMES_AT_ONCE := viper.GetInt("EVALUATOR_GAMES_AT_ONCE")
 
 	bestPlayer_iString := strconv.Itoa(bestPlayer_i)
 	checkpointWeightsPath := path.Join(resultsDirPath, bestPlayer_iString+"_weights.txt")
@@ -124,7 +141,9 @@ func evaluatorCheckpoint(
 				fmt.Sprintf("MinMax (version=%d)", bestPlayer_i),
 				playerToCompareWith.player,
 				playerToCompareWith.name,
-				COMPARE_AT_CHECKPOINTS_GAMES)
+				COMPARE_AT_CHECKPOINTS_GAMES,
+				EVALUATOR_GAMES_AT_ONCE,
+			)
 		}
 	}
 }

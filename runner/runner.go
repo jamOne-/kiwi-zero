@@ -156,45 +156,80 @@ func ComparePlayers(
 	return player1Wins
 }
 
-func ComparePlayersAsync(gameFactory NewGameFactory, player1 player.Player, player2 player.Player, numberOfGames int) int {
-	var waitGroup sync.WaitGroup
-	waitGroup.Add(numberOfGames)
-
+func ComparePlayersAsync(
+	gameFactory NewGameFactory,
+	player1 player.Player,
+	player2 player.Player,
+	numberOfGames int,
+	maxGamesAtOnce int,
+) int {
 	halfOfGames := numberOfGames / 2
-	restOfGames := numberOfGames - halfOfGames
+	player1Wins := 0
 
-	blackResults := make(chan *GameResult, halfOfGames)
-	whiteResults := make(chan *GameResult, restOfGames)
+	results, _ := PlayNGamesAsync(gameFactory, nil, player1, player2, halfOfGames, maxGamesAtOnce)
 
-	for i := 0; i < numberOfGames; i++ {
-		newGame := gameFactory()
-
-		if i < halfOfGames {
-			go PlayGameAsyncWrapper(newGame, player1, player2, nil, blackResults, &waitGroup)
-		} else {
-			go PlayGameAsyncWrapper(newGame, player2, player1, nil, whiteResults, &waitGroup)
+	for _, result := range results {
+		if result.Winner == game.BLACK {
+			player1Wins += 1
 		}
 	}
 
-	waitGroup.Wait()
+	results, _ = PlayNGamesAsync(gameFactory, nil, player2, player1, numberOfGames-halfOfGames, maxGamesAtOnce)
 
-	player1Wins := 0
-
-	for i := 0; i < numberOfGames; i++ {
-		if i < halfOfGames {
-			result := <-blackResults
-
-			if result.Winner == game.BLACK {
-				player1Wins += 1
-			}
-		} else {
-			result := <-whiteResults
-
-			if result.Winner == game.WHITE {
-				player1Wins += 1
-			}
+	for _, result := range results {
+		if result.Winner == game.WHITE {
+			player1Wins += 1
 		}
 	}
 
 	return player1Wins
+}
+
+func ComparePlayersAsyncWrapper(
+	gameFactory NewGameFactory,
+	player1 player.Player,
+	player2 player.Player,
+	numberOfGames int,
+	maxGamesAtOnce int,
+	resultChan chan int,
+	waitGroup *sync.WaitGroup,
+) {
+	resultChan <- ComparePlayersAsync(gameFactory, player1, player2, numberOfGames, maxGamesAtOnce)
+
+	if waitGroup != nil {
+		waitGroup.Done()
+	}
+}
+
+func ComparePlayerWithOthersAsync(
+	gameFactory NewGameFactory,
+	player player.Player,
+	players []player.Player,
+	numberOfGames int,
+) int {
+	numberOfPlayers := len(players)
+
+	var waitGroup sync.WaitGroup
+	waitGroup.Add(numberOfPlayers)
+
+	winsChannel := make(chan int, numberOfPlayers)
+	gamesLeft := numberOfGames
+
+	for i, opponent := range players {
+		gamesToPlay := gamesLeft / (numberOfPlayers - i)
+
+		// TODO: maxGamesAtOnce
+		go ComparePlayersAsyncWrapper(gameFactory, player, opponent, gamesToPlay, 999, winsChannel, &waitGroup)
+
+		gamesLeft -= gamesToPlay
+	}
+
+	waitGroup.Wait()
+
+	playerWins := 0
+	for i := 0; i < numberOfPlayers; i++ {
+		playerWins += <-winsChannel
+	}
+
+	return playerWins
 }

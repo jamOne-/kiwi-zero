@@ -46,11 +46,12 @@ func SelfPlayLoop(
 				SELFPLAY_GAMES_AT_ONCE,
 			)
 
-			fmt.Printf("Selfplay (%d): finished %d games", selfPlay_i, GAMES_PER_ITERATION)
+			fmt.Printf("Selfplay (%d): finished %d games\n", selfPlay_i, GAMES_PER_ITERATION)
 
 			selfPlay_i += 1
 			resultsBatch := &runner.GameResultsBatch{Results: results, TotalPositions: totalPositions}
 
+			// gameResults <- resultsBatch
 			select {
 			case gameResults <- resultsBatch:
 				// try to send

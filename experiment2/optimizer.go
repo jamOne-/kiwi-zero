@@ -92,6 +92,8 @@ func Optimizer(
 			Xs, ys := chooseXsAndys(gameFeatures, gameWinners, TRAINING_SIZE)
 			params := &trainingParams{Xs, ys}
 
+			// trainingChan <- params
+
 			select {
 			case trainingChan <- params:
 				// try to send
