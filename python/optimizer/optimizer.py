@@ -47,7 +47,8 @@ def train_model(args, model, Xs, ys):
         epochs=args.epochs,
         batch_size=args.batch_size,
         validation_split=0.2,
-        callbacks=callbacks
+        callbacks=callbacks,
+        verbose=2
     )
 
     # predicted = model.predict(X_test)
