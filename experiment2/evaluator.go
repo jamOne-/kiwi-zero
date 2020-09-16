@@ -40,7 +40,6 @@ func Evaluator(
 	bestPlayer := createPlayer(gameToFeaturesFn, initialWeights, MINMAX_DEPTH)
 	bestPlayersPool := []player.Player{bestPlayer}
 
-	// bestPlayer_i := 0
 	evaluator_i := 1
 
 	for newWeights := range newWeightsChan {
@@ -49,8 +48,8 @@ func Evaluator(
 		}
 
 		newPlayer := createPlayer(gameToFeaturesFn, newWeights, MINMAX_DEPTH)
-		newPlayerWins := runner.ComparePlayersAsync(gameFactory, newPlayer, bestPlayer, EVALUATOR_GAMES, EVALUATOR_GAMES_AT_ONCE)
-		// newPlayerWins := runner.ComparePlayerWithOthersAsync(gameFactory, newPlayer, bestPlayersPool, EVALUATOR_GAMES)
+		// newPlayerWins := runner.ComparePlayersAsync(gameFactory, newPlayer, bestPlayer, EVALUATOR_GAMES, EVALUATOR_GAMES_AT_ONCE)
+		newPlayerWins := runner.ComparePlayerWithOthersAsync(gameFactory, newPlayer, bestPlayersPool, EVALUATOR_GAMES, EVALUATOR_GAMES_AT_ONCE)
 
 		fmt.Printf("Evaluator (%d): New candidate won %d/%d games\n", evaluator_i, newPlayerWins, EVALUATOR_GAMES)
 
@@ -58,7 +57,6 @@ func Evaluator(
 			fmt.Printf("Evaluator (%d): 🎉 New candidate is the new best player 🎉\n", evaluator_i)
 
 			bestPlayer = newPlayer
-			// bestPlayer_i = evaluator_i
 			bestPlayersPool = append(bestPlayersPool, bestPlayer)
 
 			if len(bestPlayersPool) > MAX_BEST_PLAYERS_POOL_LENGTH {
@@ -75,7 +73,8 @@ func Evaluator(
 				newWeights,
 				playersToCompareWith,
 				gameFactory,
-				bestPlayer)
+				bestPlayer,
+			)
 		}
 
 		evaluator_i += 1

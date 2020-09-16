@@ -206,29 +206,24 @@ func ComparePlayerWithOthersAsync(
 	player player.Player,
 	players []player.Player,
 	numberOfGames int,
+	maxGamesAtOnce int,
 ) int {
 	numberOfPlayers := len(players)
 
-	var waitGroup sync.WaitGroup
-	waitGroup.Add(numberOfPlayers)
+	// TODO: find a better way
+	maxGamesPerPlayer := maxGamesAtOnce / numberOfPlayers
+	if maxGamesPerPlayer == 0 {
+		maxGamesPerPlayer = 1
+	}
 
-	winsChannel := make(chan int, numberOfPlayers)
 	gamesLeft := numberOfGames
+	playerWins := 0
 
 	for i, opponent := range players {
 		gamesToPlay := gamesLeft / (numberOfPlayers - i)
-
-		// TODO: maxGamesAtOnce
-		go ComparePlayersAsyncWrapper(gameFactory, player, opponent, gamesToPlay, 999, winsChannel, &waitGroup)
+		playerWins += ComparePlayersAsync(gameFactory, player, opponent, gamesToPlay, maxGamesPerPlayer)
 
 		gamesLeft -= gamesToPlay
-	}
-
-	waitGroup.Wait()
-
-	playerWins := 0
-	for i := 0; i < numberOfPlayers; i++ {
-		playerWins += <-winsChannel
 	}
 
 	return playerWins
