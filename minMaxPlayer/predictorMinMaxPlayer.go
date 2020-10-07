@@ -8,7 +8,7 @@ package minMaxPlayer
 
 // type PredictorMinMaxPlayer struct {
 // 	depth     int
-// 	predictor *predictor.Predictor
+// 	predictor predictor.Predictor
 // }
 
 // func NewPredictorMinMaxPlayer(depth int) *PredictorMinMaxPlayer {

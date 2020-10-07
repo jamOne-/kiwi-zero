@@ -133,11 +133,11 @@ func PerformSymmetryVector4(vec []int8) {
 	}
 }
 
-func FloatsToString(xs []float64) string {
+func FloatsToString(xs []float32) string {
 	xs_string := make([]string, len(xs))
 
 	for i, x := range xs {
-		xs_string[i] = strconv.FormatFloat(x, 'f', -1, 64)
+		xs_string[i] = strconv.FormatFloat(float64(x), 'f', -1, 64)
 	}
 
 	return strings.Join(xs_string, " ")

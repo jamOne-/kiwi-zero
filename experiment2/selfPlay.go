@@ -5,19 +5,15 @@ import (
 
 	"github.com/jamOne-/kiwi-zero/game"
 	"github.com/jamOne-/kiwi-zero/minMaxPlayer"
-	"github.com/jamOne-/kiwi-zero/player"
-	"github.com/jamOne-/kiwi-zero/reversiValueFns"
 	"github.com/jamOne-/kiwi-zero/runner"
 	"github.com/spf13/viper"
-	"gonum.org/v1/gonum/mat"
 )
 
 func SelfPlayLoop(
-	bestWeights chan *mat.VecDense,
+	bestValueFns chan game.ValueFn,
 	gameResults chan *runner.GameResultsBatch,
-	initialWeights *mat.VecDense,
 	gameFactory runner.NewGameFactory,
-	gameToFeaturesFn game.GameToFeaturesFn,
+	initialValueFn game.ValueFn,
 ) {
 	EPSILON := viper.GetFloat64("EPSILON")
 	GAMES_PER_ITERATION := viper.GetInt("GAMES_PER_ITERATION")
@@ -29,17 +25,17 @@ func SelfPlayLoop(
 	}
 
 	selfPlay_i := 1
-	selfPlayPlayer := createSelfPlayPlayer(gameToFeaturesFn, initialWeights, MINMAX_DEPTH, EPSILON)
+	selfPlayPlayer := minMaxPlayer.NewEpsilonGreedyMinMaxPlayer(MINMAX_DEPTH, EPSILON, initialValueFn)
 
 	for {
 		select {
-		case newWeights := <-bestWeights:
-			selfPlayPlayer = createSelfPlayPlayer(gameToFeaturesFn, newWeights, MINMAX_DEPTH, EPSILON)
+		case valueFn := <-bestValueFns:
+			selfPlayPlayer = minMaxPlayer.NewEpsilonGreedyMinMaxPlayer(MINMAX_DEPTH, EPSILON, valueFn)
 
 		default:
 			results, totalPositions := runner.PlayNGamesAsync(
 				gameFactory,
-				gameToFeaturesFn,
+				/* saveHistory */ true,
 				selfPlayPlayer,
 				selfPlayPlayer,
 				GAMES_PER_ITERATION,
@@ -60,16 +56,4 @@ func SelfPlayLoop(
 			}
 		}
 	}
-}
-
-func createSelfPlayPlayer(
-	gameToFeaturesFn game.GameToFeaturesFn,
-	weights *mat.VecDense,
-	depth int,
-	epsilon float64,
-) player.Player {
-	valueFn := reversiValueFns.CreateWeightedReversiFn(gameToFeaturesFn, weights)
-	selfPlayPlayer := minMaxPlayer.NewEpsilonGreedyMinMaxPlayer(depth, epsilon, valueFn)
-
-	return selfPlayPlayer
 }

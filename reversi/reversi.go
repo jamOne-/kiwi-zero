@@ -239,11 +239,11 @@ func (game *ReversiGame) OneHotBoard() [][][]float32 {
 		for col := int8(0); col < BOARD_SIZE; col++ {
 			field := game.Board[yXToField(row, col)]
 
-			oneHotField := []float32{1, 0, 0}
+			oneHotField := []float32{0, 0}
 			if field == -1 {
-				oneHotField = []float32{0, 1, 0}
+				oneHotField = []float32{1, 0}
 			} else if field == 1 {
-				oneHotField = []float32{0, 0, 1}
+				oneHotField = []float32{0, 1}
 			}
 
 			oneHotBoard[row][col] = oneHotField

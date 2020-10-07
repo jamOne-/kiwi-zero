@@ -5,14 +5,18 @@ import (
 	"fmt"
 	"io"
 	"math/rand"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/spf13/viper"
 
+	tfpredictor "github.com/jamOne-/kiwi-zero/TFPredictor"
 	"github.com/jamOne-/kiwi-zero/game"
 	"github.com/jamOne-/kiwi-zero/reversi"
+	"github.com/jamOne-/kiwi-zero/reversiValueFns"
 	"github.com/jamOne-/kiwi-zero/runner"
 	"github.com/jamOne-/kiwi-zero/utils"
 
@@ -26,27 +30,30 @@ type trainingParams struct {
 
 func Optimizer(
 	gameResultsChan chan *runner.GameResultsBatch,
-	newWeightsChan chan game.Features,
-	initialWeights game.Features,
+	valueFnsChan chan game.ValueFn,
 	gameToFeaturesFn game.GameToFeaturesFn,
+	resultsDirPath string,
 ) {
-
 	MAX_HISTORY_LENGTH := viper.GetInt("MAX_HISTORY_LENGTH")
 	TRAINING_SIZE := viper.GetInt("TRAINING_SIZE")
 	// TRAINING_FLIP_POSITIONS_PROB := viper.GetFloat64("TRAINING_FLIP_POSITIONS_PROB")
 	// TRAINING_TRANSFORM_POSITIONS := viper.GetBool("TRAINING_TRANSFORM_POSITIONS")
 	SGD_CONFIG := viper.Get("SGD_CONFIG").(map[string]float64)
 
-	// bestWeights := initialWeights
+	// Create models directory for current run
+	modelsDirPath := filepath.Join(resultsDirPath, "models")
+	os.Mkdir(modelsDirPath, os.ModePerm)
+
 	gameFeatures := make([]game.Features, 0)
 	gameWinners := make([]float64, 0)
 
 	pythonOptimizerCmd := exec.Command(
 		"python", "../python/optimizer/optimizer.py",
-		"--weights", strconv.Itoa(initialWeights.Len()),
 		"--learning_rate", fmt.Sprintf("%f", SGD_CONFIG["alpha0"]),
 		"--epochs", strconv.Itoa(int(SGD_CONFIG["max_epochs"])),
-		"--batch_size", strconv.Itoa(int(SGD_CONFIG["batch_size"])))
+		"--batch_size", strconv.Itoa(int(SGD_CONFIG["batch_size"])),
+		"--model_directory", modelsDirPath,
+	)
 
 	fmt.Println("Args: " + strings.Join(pythonOptimizerCmd.Args, " "))
 
@@ -54,7 +61,9 @@ func Optimizer(
 	optimizerOut, _ := pythonOptimizerCmd.StdoutPipe()
 
 	trainingChan := make(chan *trainingParams)
-	go trainer(trainingChan, optimizerIn, optimizerOut, newWeightsChan)
+	newModelPathChan := make(chan string)
+	go trainer(trainingChan, optimizerIn, optimizerOut, newModelPathChan)
+	go valueFnsCreator(newModelPathChan, valueFnsChan)
 	// go optimizerReader(optimizerOut, newWeightsChan)
 	// go echoReader(optimizerOut)
 	pythonOptimizerCmd.Start()
@@ -65,7 +74,7 @@ func Optimizer(
 		select {
 		case batch := <-gameResultsChan:
 			results, totalPositions := batch.Results, batch.TotalPositions
-			features, winners := splitResults(results, totalPositions)
+			games, winners := splitResults(results, totalPositions)
 
 			// if TRAINING_TRANSFORM_POSITIONS {
 			// 	transformPositions(positions)
@@ -78,7 +87,7 @@ func Optimizer(
 			// transform -1, 0, 1 winners to black winning probability
 			transformWinnersToProbabilities(winners)
 
-			// features := createFeaturesSlice(reversiToFeaturesFn, positions)
+			features := createFeaturesSlice(gameToFeaturesFn, positions)
 
 			gameFeatures = append(gameFeatures, features...)
 			gameWinners = append(gameWinners, winners...)
@@ -112,16 +121,15 @@ func transformWinnersToProbabilities(winners []float64) {
 	}
 }
 
-// func createFeaturesSlice(reversiToFeaturesFn reversiValueFns.ReversiToFeaturesFn, positions []game.Game) []Features {
-// 	featuresSlice := make([]Features, len(positions))
+func createFeaturesSlice(gameToFeaturesFn game.GameToFeaturesFn, positions []game.Game) []game.Features {
+	featuresSlice := make([]game.Features, len(positions))
 
-// 	for i, position := range positions {
-// 		reversiGame := position.(*reversi.ReversiGame)
-// 		featuresSlice[i] = reversiToFeaturesFn(reversiGame)
-// 	}
+	for i, position := range positions {
+		featuresSlice[i] = reversiToFeaturesFn(position)
+	}
 
-// 	return featuresSlice
-// }
+	return featuresSlice
+}
 
 func chooseXsAndys(XsSource []game.Features, ysSource []float64, N int) ([]game.Features, []float64) {
 	Xs := make([]game.Features, N)
@@ -136,22 +144,22 @@ func chooseXsAndys(XsSource []game.Features, ysSource []float64, N int) ([]game.
 	return Xs, ys
 }
 
-func splitResults(results []*runner.GameResult, totalPositions int) ([]game.Features, []float64) {
-	featuresList := make([]game.Features, totalPositions)
+func splitResults(results []*runner.GameResult, totalPositions int) ([]game.Game, []float64) {
+	gamesList := make([]game.Game, totalPositions)
 	winners := make([]float64, totalPositions)
 
 	index := 0
 	for _, result := range results {
 		winner := float64(result.Winner)
 
-		for _, features := range result.FeaturesList {
-			featuresList[index] = features
+		for _, games := range result.Games {
+			gamesList[index] = games
 			winners[index] = winner
 			index += 1
 		}
 	}
 
-	return featuresList, winners
+	return gamesList, winners
 }
 
 func randomPositionTransformation(position game.Game) {
@@ -221,19 +229,24 @@ func trainer(
 	paramsChan chan *trainingParams,
 	optimizerIn io.WriteCloser,
 	optimizerOut io.ReadCloser,
-	newWeightsChan chan game.Features,
+	newModelPathChan chan string,
 ) {
 	optimizerOutReader := bufio.NewReader(optimizerOut)
 	training_i := 1
 
 	for params := range paramsChan {
 		Xs, ys := params.Xs, params.ys
+		Xs_shape := [4]int{len(Xs), len(Xs[0]), len(Xs[0][0]), len(Xs[0][0][0])}
 
-		optimizerIn.Write([]byte(fmt.Sprintf("%v\n", len(ys))))
+		optimizerIn.Write([]byte(fmt.Sprintf("%v %v %v %v\n", Xs_shape[0], Xs_shape[1], Xs_shape[2], Xs_shape[3])))
 
-		for _, X := range Xs {
-			line := utils.FloatsToString(X.RawVector().Data) + "\n"
-			optimizerIn.Write([]byte(line))
+		for _, XXX := range Xs {
+			for _, XX := range XXX {
+				for _, X := range XX {
+					line := utils.FloatsToString(X) + "\n"
+					optimizerIn.Write([]byte(line))
+				}
+			}
 		}
 
 		for _, y := range ys {
@@ -244,13 +257,14 @@ func trainer(
 		// fmt.Printf("Optimizer (%d): training...\n", training_i)
 
 		trainingSummary, _ := optimizerOutReader.ReadString('\n')
-		newWeightsString, _ := optimizerOutReader.ReadString('\n')
-		newWeights := parseWeights(newWeightsString)
+		newModelPath, _ := optimizerOutReader.ReadString('\n')
+		// newWeightsString, _ := optimizerOutReader.ReadString('\n')
+		// newWeights := parseWeights(newWeightsString)
 		fmt.Printf("Optimizer (%d): %s", training_i, trainingSummary)
 		training_i += 1
 
 		select {
-		case newWeightsChan <- newWeights:
+		case newModelPathChan <- newModelPath:
 			// try to send
 
 		default:
@@ -261,5 +275,24 @@ func trainer(
 		// bestWeights = sgdResult.BestWeights
 
 		// fmt.Printf("Optimizer (%d): totalEpochs=%d, bestEpoch=%d, testSetError=%.2f, validationSetError=%.2f, trainingError=%.2f\n", training_i, sgdResult.TotalEpochs, sgdResult.BestWeightsEpoch, sgdResult.TestSetErrorRate, sgdResult.BestValidErrorRate, sgdResult.TrainErrorsHistory[len(sgdResult.TrainErrorsHistory)-1])
+	}
+}
+
+func valueFnsCreator(
+	modelPathChan chan string,
+	valueFns chan game.ValueFn,
+	gameToFeatures game.GameToFeaturesFn,
+) {
+	for path := range modelPathChan {
+		predictor := tfpredictor.NewTFPredictor(path)
+		valueFn := reversiValueFns.CreateMinMaxValueFn(gameToFeatures, predictor)
+
+		select {
+		case valueFns <- valueFn:
+			// try to send
+
+		default:
+			// else skip
+		}
 	}
 }

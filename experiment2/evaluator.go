@@ -11,9 +11,7 @@ import (
 	"github.com/jamOne-/kiwi-zero/game"
 	"github.com/jamOne-/kiwi-zero/minMaxPlayer"
 	"github.com/jamOne-/kiwi-zero/player"
-	"github.com/jamOne-/kiwi-zero/reversiValueFns"
 	"github.com/jamOne-/kiwi-zero/runner"
-	"gonum.org/v1/gonum/mat"
 )
 
 type PlayerToCompare struct {
@@ -22,32 +20,30 @@ type PlayerToCompare struct {
 }
 
 func Evaluator(
-	newWeightsChan chan *mat.VecDense,
-	bestWeightsChan chan *mat.VecDense,
+	newValueFns chan *game.ValueFn,
+	bestValueFns chan *game.ValueFn,
 	gameFactory runner.NewGameFactory,
-	initialWeights *mat.VecDense,
-	gameToFeaturesFn game.GameToFeaturesFn,
+	initialValueFn game.ValueFn,
 	playersToCompareWith []*PlayerToCompare,
 	resultsDirPath string,
 ) {
-
 	CHECKPOINT_EVERY := viper.GetInt("CHECKPOINT_EVERY")
 	EVALUATOR_GAMES := viper.GetInt("EVALUATOR_GAMES")
 	EVALUATOR_GAMES_AT_ONCE := viper.GetInt("EVALUATOR_GAMES_AT_ONCE")
 	MAX_BEST_PLAYERS_POOL_LENGTH := viper.GetInt("MAX_BEST_PLAYERS_POOL_LENGTH")
 	MINMAX_DEPTH := viper.GetInt("MINMAX_DEPTH")
 
-	bestPlayer := createPlayer(gameToFeaturesFn, initialWeights, MINMAX_DEPTH)
+	bestPlayer := minMaxPlayer.NewMinMaxPlayer(MINMAX_DEPTH, initialValueFn)
 	bestPlayersPool := []player.Player{bestPlayer}
 
 	evaluator_i := 1
 
-	for newWeights := range newWeightsChan {
-		if newWeights == initialWeights {
-			continue
-		}
+	for newValueFn := range newValueFns {
+		// if newModelPath == initialWeights {
+		// 	continue
+		// }
 
-		newPlayer := createPlayer(gameToFeaturesFn, newWeights, MINMAX_DEPTH)
+		newPlayer := minMaxPlayer.NewMinMaxPlayer(MINMAX_DEPTH, newValueFn)
 		// newPlayerWins := runner.ComparePlayersAsync(gameFactory, newPlayer, bestPlayer, EVALUATOR_GAMES, EVALUATOR_GAMES_AT_ONCE)
 		newPlayerWins := runner.ComparePlayerWithOthersAsync(gameFactory, newPlayer, bestPlayersPool, EVALUATOR_GAMES, EVALUATOR_GAMES_AT_ONCE)
 
@@ -63,14 +59,13 @@ func Evaluator(
 				bestPlayersPool = bestPlayersPool[len(bestPlayersPool)-MAX_BEST_PLAYERS_POOL_LENGTH:]
 			}
 
-			bestWeightsChan <- newWeights
+			bestValueFns <- newValueFn
 		}
 
 		if CHECKPOINT_EVERY > 0 && evaluator_i%CHECKPOINT_EVERY == 0 {
 			go evaluatorCheckpoint(
 				evaluator_i,
 				resultsDirPath,
-				newWeights,
 				playersToCompareWith,
 				gameFactory,
 				bestPlayer,
@@ -79,17 +74,6 @@ func Evaluator(
 
 		evaluator_i += 1
 	}
-}
-
-func createPlayer(
-	gameToFeaturesFn game.GameToFeaturesFn,
-	weights *mat.VecDense,
-	depth int,
-) player.Player {
-	valueFn := reversiValueFns.CreateWeightedReversiFn(gameToFeaturesFn, weights)
-	player := minMaxPlayer.NewMinMaxPlayer(depth, valueFn)
-
-	return player
 }
 
 func comparePlayersAndSaveResults(
@@ -115,19 +99,18 @@ func comparePlayersAndSaveResults(
 func evaluatorCheckpoint(
 	bestPlayer_i int,
 	resultsDirPath string,
-	newWeights *mat.VecDense,
 	playersToCompareWith []*PlayerToCompare,
 	gameFactory runner.NewGameFactory,
-	bestPlayer player.Player) {
-
+	bestPlayer player.Player,
+) {
 	COMPARE_AT_CHECKPOINTS := viper.GetBool("COMPARE_AT_CHECKPOINTS")
 	COMPARE_AT_CHECKPOINTS_GAMES := viper.GetInt("COMPARE_AT_CHECKPOINTS_GAMES")
 	EVALUATOR_GAMES_AT_ONCE := viper.GetInt("EVALUATOR_GAMES_AT_ONCE")
 
 	bestPlayer_iString := strconv.Itoa(bestPlayer_i)
-	checkpointWeightsPath := path.Join(resultsDirPath, bestPlayer_iString+"_weights.txt")
+	// checkpointWeightsPath := path.Join(resultsDirPath, bestPlayer_iString+"_weights.txt")
 
-	reversiValueFns.SaveWeightsToFile(newWeights, checkpointWeightsPath)
+	// reversiValueFns.SaveWeightsToFile(newWeights, checkpointWeightsPath)
 
 	if COMPARE_AT_CHECKPOINTS {
 		resultsPath := path.Join(resultsDirPath, bestPlayer_iString+"_results.txt")

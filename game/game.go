@@ -1,14 +1,11 @@
 package game
 
-import (
-	"gonum.org/v1/gonum/mat"
-)
-
 type PlayerColor = int8
 type Field = int8
 type Move = Field
-type Features = *mat.VecDense
+type Features = [][][]float32
 type GameToFeaturesFn func(game Game) Features
+type ValueFn func(game Game) float32
 
 type Game interface {
 	Copy() Game

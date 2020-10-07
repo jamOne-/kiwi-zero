@@ -1,6 +1,7 @@
 import sys
 import argparse
 import os
+import Model
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--weights', default='72', type=int)
@@ -8,6 +9,10 @@ parser.add_argument('--learning_rate', default='1e-3', type=float)
 parser.add_argument('--epochs', default='1000', type=int)
 parser.add_argument('--batch_size', default='16', type=int)
 parser.add_argument('--logfile', default='optimizer_log.txt', type=str)
+parser.add_argument('--res_layers_count', default='10', type=int)
+parser.add_argument('--filters', default='32', type=int)
+parser.add_argument('--add_policy_head', default=False, type=bool)
+parser.add_argument('--models_directory', type=str)
 args = parser.parse_args()
 
 stdout = sys.stdout
@@ -63,36 +68,89 @@ def train_model(args, model, Xs, ys):
         len(history.history["loss"]), loss, acc, val_loss, val_acc, test_accuracy), file=stdout)
 
 
-def print_model_weights(model):
-    layer = model.get_layer('output')
-    weights = layer.get_weights()[0].reshape(-1)
-    weightsString = " ".join(map(str, weights))
+# def print_model_weights(model):
+#     layer = model.get_layer('output')
+#     weights = layer.get_weights()[0].reshape(-1)
+#     weightsString = " ".join(map(str, weights))
 
-    print(weightsString, file=stdout, flush=True)
+#     print(weightsString, file=stdout, flush=True)
+
+
+def encode_field(field):
+    if field == 0:
+        return [0, 0]
+    elif field == -1:
+        return [1, 0]
+    else:
+        return [0, 1]
+
+
+def change_board_representation(board_in_row):
+    return [
+        [encode_field(board_in_row[y * 8 + x]) for x in range(8)]
+        for y in range(8)
+    ]
+
+
+def read_features(Xs_shape):
+    # Xs = []
+
+    # for i in range(Xs_shape[0]):
+    #     first_layer = []
+
+    #     for j in range(Xs_shape[1]):
+    #         second_layer = []
+
+    #         for k in range(Xs_shape[2]):
+    #             third_layer = list(map(int, input().rstrip().split(" ")))
+    #             second_layer.append(third_layer)
+
+    Xs = [[[[list(map(int, input()))]
+            for k in range(Xs_shape[2])]
+           for j in range(Xs_shape[1])]
+          for i in range(Xs_shape[0])]
+
+    return np.array(Xs)
 
 
 if __name__ == "__main__":
-    model = get_model((args.weights,))
+    model = Model.get_model(
+        input_shape=(8, 8, 2),
+        res_layers_count=args.res_layers_count,
+        filters=args.filters,
+        add_policy_head=args.add_policy_head,
+    )
+
+    # TODO: handle policy_out
+    losses = {
+        "value_out": "binary_crossentropy",
+        # "policy_out": "binary_crossentropy",
+    }
+
     model.compile(
         optimizer=tf.train.AdamOptimizer(args.learning_rate),
-        loss='binary_crossentropy',
+        losses='losses',
         metrics=['accuracy']
     )
 
     # print(model.count_params())
     # print(model.get_layer('output').get_weights())
 
+    iteration = 0
     while True:
-        # weights = np.array(map(float, input().split(" ")))
-        Xs_length = int(input())
-        Xs = [list(map(float, input().rstrip().split(" ")))
-              for i in range(Xs_length)]
-        ys = [float(input().rstrip()) for i in range(Xs_length)]
+        Xs_shape = list(map(int, input().rstrip().split(" ")))
+        Xs = read_features(Xs_shape)
 
-        Xs = np.array(Xs)
+        ys = [float(input().rstrip()) for i in range(Xs_length)]
         ys = np.array(ys)
 
         train_model(args, model, Xs, ys)
-        print_model_weights(model)
+        # print_model_weights(model)
+
+        model_path = "{}/{}".format(args.model_directory, iteration)
+        Model.save_model_to_file(model, model_path)
+        print(model_path, file=stdout, flush=True)
+
+        iteration += 1
 
 sys.stdout.close()

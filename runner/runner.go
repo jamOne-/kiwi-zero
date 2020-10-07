@@ -14,29 +14,24 @@ type GameResultsBatch struct {
 }
 
 type GameResult struct {
-	FeaturesList []game.Features
-	Winner       game.PlayerColor
+	History []game.Game
+	Winner  game.PlayerColor
 }
 
 type NewGameFactory func() game.Game
-
-func EmptyFeaturesFn(g game.Game) game.Features {
-	return nil
-}
 
 func PlayGame(
 	g game.Game,
 	blackPlayer player.Player,
 	whitePlayer player.Player,
-	featuresFn game.GameToFeaturesFn,
+	saveHistory bool,
 ) *GameResult {
-	if featuresFn == nil {
-		featuresFn = EmptyFeaturesFn
-	}
-
 	finished, winner := false, game.PlayerColor(0)
-	featuresList := make([]game.Features, 0)
-	featuresList = append(featuresList, featuresFn(g))
+	history := make([]game.Game, 0)
+
+	if saveHistory {
+		history = append(history, g)
+	}
 
 	for !finished {
 		currentPlayer := g.GetCurrentPlayerColor()
@@ -49,21 +44,24 @@ func PlayGame(
 		}
 
 		finished, winner = g.MakeMove(move)
-		featuresList = append(featuresList, featuresFn(g))
+
+		if saveHistory {
+			history = append(history, g)
+		}
 	}
 
-	return &GameResult{featuresList, winner}
+	return &GameResult{history, winner}
 }
 
 func PlayGameAsyncWrapper(
 	g game.Game,
 	blackPlayer player.Player,
 	whitePlayer player.Player,
-	featuresFn game.GameToFeaturesFn,
+	saveHistory bool,
 	resultChan chan *GameResult,
 	waitGroup *sync.WaitGroup,
 ) {
-	resultChan <- PlayGame(g, blackPlayer, whitePlayer, featuresFn)
+	resultChan <- PlayGame(g, blackPlayer, whitePlayer, saveHistory)
 
 	if waitGroup != nil {
 		waitGroup.Done()
@@ -72,7 +70,7 @@ func PlayGameAsyncWrapper(
 
 func PlayNGames(
 	newGameFactory NewGameFactory,
-	featuresFn game.GameToFeaturesFn,
+	saveHistory bool,
 	player1 player.Player,
 	player2 player.Player,
 	n int,
@@ -82,9 +80,9 @@ func PlayNGames(
 
 	for i := 0; i < n; i++ {
 		newGame := newGameFactory()
-		result := PlayGame(newGame, player1, player2, featuresFn)
+		result := PlayGame(newGame, player1, player2, saveHistory)
 		results[i] = result
-		totalPositions += len(result.FeaturesList)
+		totalPositions += len(result.History)
 	}
 
 	return results, totalPositions
@@ -92,7 +90,7 @@ func PlayNGames(
 
 func PlayNGamesAsync(
 	newGameFactory NewGameFactory,
-	featuresFn game.GameToFeaturesFn,
+	saveHistory bool,
 	player1 player.Player,
 	player2 player.Player,
 	n int,
@@ -103,7 +101,7 @@ func PlayNGamesAsync(
 
 	for i := 0; i < maxGamesAtOnce; i++ {
 		newGame := newGameFactory()
-		go PlayGameAsyncWrapper(newGame, player1, player2, featuresFn, resultsChan, nil)
+		go PlayGameAsyncWrapper(newGame, player1, player2, saveHistory, resultsChan, nil)
 	}
 
 	gamesRan := maxGamesAtOnce
@@ -113,11 +111,11 @@ func PlayNGamesAsync(
 	for i := 0; i < n; i++ {
 		result := <-resultsChan
 		results[i] = result
-		totalPositions += len(result.FeaturesList)
+		totalPositions += len(result.History)
 
 		if gamesRan < n {
 			newGame := newGameFactory()
-			go PlayGameAsyncWrapper(newGame, player1, player2, featuresFn, resultsChan, nil)
+			go PlayGameAsyncWrapper(newGame, player1, player2, saveHistory, resultsChan, nil)
 			gamesRan += 1
 		}
 	}
@@ -136,7 +134,7 @@ func ComparePlayers(
 
 	for i := 0; i < halfOfGames; i++ {
 		newGame := gameFactory()
-		result := PlayGame(newGame, player1, player2, nil)
+		result := PlayGame(newGame, player1, player2, false)
 
 		if result.Winner == game.BLACK {
 			player1Wins += 1
@@ -146,7 +144,7 @@ func ComparePlayers(
 	restOfGames := numberOfGames - halfOfGames
 	for i := 0; i < restOfGames; i++ {
 		newGame := gameFactory()
-		result := PlayGame(newGame, player2, player1, nil)
+		result := PlayGame(newGame, player2, player1, false)
 
 		if result.Winner == game.WHITE {
 			player1Wins += 1
@@ -166,7 +164,7 @@ func ComparePlayersAsync(
 	halfOfGames := numberOfGames / 2
 	player1Wins := 0
 
-	results, _ := PlayNGamesAsync(gameFactory, nil, player1, player2, halfOfGames, maxGamesAtOnce)
+	results, _ := PlayNGamesAsync(gameFactory, false, player1, player2, halfOfGames, maxGamesAtOnce)
 
 	for _, result := range results {
 		if result.Winner == game.BLACK {
@@ -174,7 +172,7 @@ func ComparePlayersAsync(
 		}
 	}
 
-	results, _ = PlayNGamesAsync(gameFactory, nil, player2, player1, numberOfGames-halfOfGames, maxGamesAtOnce)
+	results, _ = PlayNGamesAsync(gameFactory, false, player2, player1, numberOfGames-halfOfGames, maxGamesAtOnce)
 
 	for _, result := range results {
 		if result.Winner == game.WHITE {
