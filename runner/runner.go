@@ -30,7 +30,7 @@ func PlayGame(
 	history := make([]game.Game, 0)
 
 	if saveHistory {
-		history = append(history, g)
+		history = append(history, g.Copy())
 	}
 
 	for !finished {
@@ -46,7 +46,7 @@ func PlayGame(
 		finished, winner = g.MakeMove(move)
 
 		if saveHistory {
-			history = append(history, g)
+			history = append(history, g.Copy())
 		}
 	}
 
