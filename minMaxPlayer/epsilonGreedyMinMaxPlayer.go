@@ -9,10 +9,10 @@ import (
 type EpsilonGreedyMinMaxPlayer struct {
 	depth   int
 	epsilon float64
-	valueFn ValueFn
+	valueFn game.ValueFn
 }
 
-func NewEpsilonGreedyMinMaxPlayer(depth int, epsilon float64, valueFn ValueFn) *EpsilonGreedyMinMaxPlayer {
+func NewEpsilonGreedyMinMaxPlayer(depth int, epsilon float64, valueFn game.ValueFn) *EpsilonGreedyMinMaxPlayer {
 	return &EpsilonGreedyMinMaxPlayer{depth, epsilon, valueFn}
 }
 

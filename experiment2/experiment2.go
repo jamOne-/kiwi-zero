@@ -35,11 +35,11 @@ func main() {
 
 	// INITIAL_WEIGHTS_PATH := viper.GetString("INITIAL_WEIGHTS_PATH")
 	MCTS_SIMULATIONS := viper.GetInt("MCTS_SIMULATIONS")
-	MINMAX_DEPTH := viper.GetInt("MINMAX_DEPTH")
+	// MINMAX_DEPTH := viper.GetInt("MINMAX_DEPTH")
 	// OLD_MINMAX_WEIGHTS_PATH := viper.GetString("OLD_MINMAX_WEIGHTS_PATH")
 	// OLD_MINMAX_WEIGHTS_MODE := viper.GetString("OLD_MINMAX_WEIGHTS_MODE")
 	RESULTS_DIR_NAME := viper.GetString("RESULTS_DIR_NAME")
-	TRAINING_MODE := viper.GetString("TRAINING_MODE")
+	// TRAINING_MODE := viper.GetString("TRAINING_MODE")
 
 	resultsDirPath := createResultsDir(RESULTS_DIR_NAME)
 	configPath := path.Join(resultsDirPath, "config.yaml")
@@ -98,7 +98,7 @@ func createResultsDir(resultsDirName string) string {
 
 func getInitialValueFn() game.ValueFn {
 	// TODO
-	return func(game game.Game) float32 {
+	return func(game game.Game) float64 {
 		return 0.5
 	}
 }

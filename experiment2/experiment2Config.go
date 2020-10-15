@@ -7,16 +7,16 @@ func initConfig() {
 	viper.SetDefault("COMPARE_AT_CHECKPOINTS", true)
 	viper.SetDefault("COMPARE_AT_CHECKPOINTS_GAMES", 50)
 	viper.SetDefault("EPSILON", 0.1)
-	viper.SetDefault("EVALUATOR_GAMES", 100)
+	viper.SetDefault("EVALUATOR_GAMES", 20)
 	viper.SetDefault("EVALUATOR_GAMES_AT_ONCE", 10)
 	viper.SetDefault("GAMES_PER_ITERATION", 50)
 	viper.SetDefault("INITIAL_WEIGHTS_PATH", "")
 	viper.SetDefault("MAX_BEST_PLAYERS_POOL_LENGTH", 10)
 	viper.SetDefault("MAX_HISTORY_LENGTH", 100000)
 	viper.SetDefault("MCTS_SIMULATIONS", 2000)
-	viper.SetDefault("MINMAX_DEPTH", 4)
+	viper.SetDefault("MINMAX_DEPTH", 3)
 	viper.SetDefault("RESULTS_DIR_NAME", "")
-	viper.SetDefault("SELFPLAY_GAMES_AT_ONCE", 2)
+	viper.SetDefault("SELFPLAY_GAMES_AT_ONCE", 1)
 	viper.SetDefault("TRAINING_FLIP_POSITIONS_PROB", 0.0)
 	viper.SetDefault("TRAINING_MODE", "extended") // "normal" | "triangle" | "extended"
 	viper.SetDefault("TRAINING_SIZE", 512)
@@ -32,7 +32,7 @@ func initConfig() {
 		"alphaConst":    1e-5,
 		"momentum":      0.9,
 		"batch_size":    16,
-		"max_epochs":    500,
+		"max_epochs":    100,
 		"weights_decay": 0,
 		"debug":         0})
 }

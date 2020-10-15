@@ -54,7 +54,11 @@ func MergeMaps(m1 map[string]float64, m2 map[string]float64) map[string]float64 
 // }
 
 func TimeNowString() string {
-	return strings.Replace(time.Now().String()[:19], ":", "", -1)
+	ret := time.Now().String()[:19]
+	ret = strings.ReplaceAll(ret, ":", "")
+	ret = strings.ReplaceAll(ret, " ", "-")
+
+	return ret
 }
 
 func CreateFilledVector(length int, value float64) *mat.VecDense {

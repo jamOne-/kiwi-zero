@@ -19,8 +19,6 @@ import (
 	"github.com/jamOne-/kiwi-zero/reversiValueFns"
 	"github.com/jamOne-/kiwi-zero/runner"
 	"github.com/jamOne-/kiwi-zero/utils"
-
-	"gonum.org/v1/gonum/mat"
 )
 
 type trainingParams struct {
@@ -48,11 +46,11 @@ func Optimizer(
 	gameWinners := make([]float64, 0)
 
 	pythonOptimizerCmd := exec.Command(
-		"python", "../python/optimizer/optimizer.py",
+		"python3", "../python/optimizer/optimizer.py",
 		"--learning_rate", fmt.Sprintf("%f", SGD_CONFIG["alpha0"]),
 		"--epochs", strconv.Itoa(int(SGD_CONFIG["max_epochs"])),
 		"--batch_size", strconv.Itoa(int(SGD_CONFIG["batch_size"])),
-		"--model_directory", modelsDirPath,
+		"--models_directory", modelsDirPath,
 	)
 
 	fmt.Println("Args: " + strings.Join(pythonOptimizerCmd.Args, " "))
@@ -63,7 +61,7 @@ func Optimizer(
 	trainingChan := make(chan *trainingParams)
 	newModelPathChan := make(chan string)
 	go trainer(trainingChan, optimizerIn, optimizerOut, newModelPathChan)
-	go valueFnsCreator(newModelPathChan, valueFnsChan)
+	go valueFnsCreator(newModelPathChan, valueFnsChan, gameToFeaturesFn)
 	// go optimizerReader(optimizerOut, newWeightsChan)
 	// go echoReader(optimizerOut)
 	pythonOptimizerCmd.Start()
@@ -74,7 +72,7 @@ func Optimizer(
 		select {
 		case batch := <-gameResultsChan:
 			results, totalPositions := batch.Results, batch.TotalPositions
-			games, winners := splitResults(results, totalPositions)
+			positions, winners := splitResults(results, totalPositions)
 
 			// if TRAINING_TRANSFORM_POSITIONS {
 			// 	transformPositions(positions)
@@ -125,7 +123,7 @@ func createFeaturesSlice(gameToFeaturesFn game.GameToFeaturesFn, positions []gam
 	featuresSlice := make([]game.Features, len(positions))
 
 	for i, position := range positions {
-		featuresSlice[i] = reversiToFeaturesFn(position)
+		featuresSlice[i] = gameToFeaturesFn(position)
 	}
 
 	return featuresSlice
@@ -152,7 +150,7 @@ func splitResults(results []*runner.GameResult, totalPositions int) ([]game.Game
 	for _, result := range results {
 		winner := float64(result.Winner)
 
-		for _, games := range result.Games {
+		for _, games := range result.History {
 			gamesList[index] = games
 			winners[index] = winner
 			index += 1
@@ -213,17 +211,17 @@ func flipGameColors(g game.Game) {
 	}
 }
 
-func parseWeights(weightsString string) game.Features {
-	splitted := strings.Split(weightsString, " ")
-	weights := mat.NewVecDense(len(splitted), nil)
+// func parseWeights(weightsString string) game.Features {
+// 	splitted := strings.Split(weightsString, " ")
+// 	weights := mat.NewVecDense(len(splitted), nil)
 
-	for i, s := range splitted {
-		weight, _ := strconv.ParseFloat(s, 64)
-		weights.SetVec(i, weight)
-	}
+// 	for i, s := range splitted {
+// 		weight, _ := strconv.ParseFloat(s, 64)
+// 		weights.SetVec(i, weight)
+// 	}
 
-	return weights
-}
+// 	return weights
+// }
 
 func trainer(
 	paramsChan chan *trainingParams,
@@ -258,9 +256,11 @@ func trainer(
 
 		trainingSummary, _ := optimizerOutReader.ReadString('\n')
 		newModelPath, _ := optimizerOutReader.ReadString('\n')
+		newModelPath = strings.TrimSpace(newModelPath)
+
 		// newWeightsString, _ := optimizerOutReader.ReadString('\n')
 		// newWeights := parseWeights(newWeightsString)
-		fmt.Printf("Optimizer (%d): %s", training_i, trainingSummary)
+		fmt.Printf("Optimizer (%d): %s\n", training_i, trainingSummary)
 		training_i += 1
 
 		select {
@@ -284,6 +284,12 @@ func valueFnsCreator(
 	gameToFeatures game.GameToFeaturesFn,
 ) {
 	for path := range modelPathChan {
+		if path == "" {
+			continue
+		}
+
+		fmt.Printf("Optimizer: saved model path=%s", path)
+
 		predictor := tfpredictor.NewTFPredictor(path)
 		valueFn := reversiValueFns.CreateMinMaxValueFn(gameToFeatures, predictor)
 

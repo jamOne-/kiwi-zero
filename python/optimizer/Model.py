@@ -7,7 +7,7 @@ def add_ResidualLayer(inputs, filters):
         filters,
         kernel_size=(3, 3),
         padding='same',
-        use_bias=False
+        # use_bias=False
     )(inputs)
     x = layers.BatchNormalization()(x)
     x = layers.Activation('relu')(x)
@@ -16,7 +16,7 @@ def add_ResidualLayer(inputs, filters):
         filters,
         kernel_size=(3, 3),
         padding='same',
-        use_bias=False
+        # use_bias=False
     )(x)
     x = layers.BatchNormalization()(x)
 
@@ -31,7 +31,7 @@ def add_ValueHead(model, filters):
         1,
         kernel_size=(1, 1),
         padding='same',
-        use_bias=False
+        # use_bias=False
     )(model)
     model = layers.BatchNormalization()(model)
     model = layers.Activation('relu')(model)
@@ -49,7 +49,7 @@ def add_PolicyHead(model):
         2,
         kernel_size=(1, 1),
         padding='same',
-        use_bias=False
+        # use_bias=False
     )(model)
     model = layers.BatchNormalization()(model)
     model = layers.Activation('relu')(model)
@@ -62,7 +62,7 @@ def add_PolicyHead(model):
 
 def get_model(
     input_shape=(8, 8, 2),
-    res_layers_count=10,
+    res_layers_count=1,
     filters=32,
     add_policy_head=False
 ):
@@ -71,17 +71,17 @@ def get_model(
         filters,
         kernel_size=(3, 3),
         padding='same',
-        use_bias=False
+        # use_bias=False
     )(inputs)
     model = layers.BatchNormalization()(model)
     model = layers.Activation('relu')(model)
 
     for _ in range(res_layers_count):
-        model = add_ResidualLayer(model)
+        model = add_ResidualLayer(model, filters)
 
     outputs = []
 
-    value_out = add_ValueHead(model)
+    value_out = add_ValueHead(model, filters)
     outputs.append(value_out)
 
     if add_policy_head:
@@ -105,4 +105,4 @@ def plot_model(model=None):
 
 
 def save_model_to_file(model, path):
-    tf.contrib.saved_model.save_keras_model(model, path)
+    model.save(path, include_optimizer=False)

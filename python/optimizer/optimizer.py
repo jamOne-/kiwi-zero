@@ -9,7 +9,7 @@ parser.add_argument('--learning_rate', default='1e-3', type=float)
 parser.add_argument('--epochs', default='1000', type=int)
 parser.add_argument('--batch_size', default='16', type=int)
 parser.add_argument('--logfile', default='optimizer_log.txt', type=str)
-parser.add_argument('--res_layers_count', default='10', type=int)
+parser.add_argument('--res_layers_count', default='1', type=int)
 parser.add_argument('--filters', default='32', type=int)
 parser.add_argument('--add_policy_head', default=False, type=bool)
 parser.add_argument('--models_directory', type=str)
@@ -23,7 +23,7 @@ sys.stderr = sys.stdout
 
 import numpy as np
 import tensorflow as tf
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from tensorflow.keras import layers
 
@@ -60,20 +60,12 @@ def train_model(args, model, Xs, ys):
     # test_accuracy = sum(predicted == y_test) / (y_test.shape[0])
     test_accuracy = model.evaluate(x=X_test, y=y_test)
     loss = history.history["loss"][-1]
-    acc = history.history["acc"][-1]
+    accuracy = history.history["accuracy"][-1]
     val_loss = history.history["val_loss"][-1]
-    val_acc = history.history["val_acc"][-1]
+    val_accuracy = history.history["val_accuracy"][-1]
 
-    print("Finished after {} epochs: loss={}, acc={}, val_loss={}, val_acc={}, test_acc={}".format(
-        len(history.history["loss"]), loss, acc, val_loss, val_acc, test_accuracy), file=stdout)
-
-
-# def print_model_weights(model):
-#     layer = model.get_layer('output')
-#     weights = layer.get_weights()[0].reshape(-1)
-#     weightsString = " ".join(map(str, weights))
-
-#     print(weightsString, file=stdout, flush=True)
+    print("Finished after {} epochs: loss={}, accuracy={}, val_loss={}, val_accuracy={}, test_acc={}".format(
+        len(history.history["loss"]), loss, accuracy, val_loss, val_accuracy, test_accuracy), file=stdout)
 
 
 def encode_field(field):
@@ -93,19 +85,7 @@ def change_board_representation(board_in_row):
 
 
 def read_features(Xs_shape):
-    # Xs = []
-
-    # for i in range(Xs_shape[0]):
-    #     first_layer = []
-
-    #     for j in range(Xs_shape[1]):
-    #         second_layer = []
-
-    #         for k in range(Xs_shape[2]):
-    #             third_layer = list(map(int, input().rstrip().split(" ")))
-    #             second_layer.append(third_layer)
-
-    Xs = [[[[list(map(int, input()))]
+    Xs = [[[list(map(int, input().rstrip().split(" ")))
             for k in range(Xs_shape[2])]
            for j in range(Xs_shape[1])]
           for i in range(Xs_shape[0])]
@@ -122,34 +102,33 @@ if __name__ == "__main__":
     )
 
     # TODO: handle policy_out
-    losses = {
+    loss_dict = {
         "value_out": "binary_crossentropy",
         # "policy_out": "binary_crossentropy",
     }
 
     model.compile(
-        optimizer=tf.train.AdamOptimizer(args.learning_rate),
-        losses='losses',
+        optimizer=tf.keras.optimizers.Adam(args.learning_rate),
+        loss=loss_dict,
         metrics=['accuracy']
     )
-
-    # print(model.count_params())
-    # print(model.get_layer('output').get_weights())
 
     iteration = 0
     while True:
         Xs_shape = list(map(int, input().rstrip().split(" ")))
+        print(Xs_shape)
         Xs = read_features(Xs_shape)
 
-        ys = [float(input().rstrip()) for i in range(Xs_length)]
+        ys = [float(input().rstrip()) for i in range(Xs_shape[0])]
         ys = np.array(ys)
 
         train_model(args, model, Xs, ys)
-        # print_model_weights(model)
 
-        model_path = "{}/{}".format(args.model_directory, iteration)
+        model_path = "{}/{}".format(args.models_directory, iteration)
         Model.save_model_to_file(model, model_path)
         print(model_path, file=stdout, flush=True)
+
+        print(model_path)
 
         iteration += 1
 

@@ -9,14 +9,12 @@ import (
 
 const INFINITY = 99999999.0
 
-type ValueFn func(game.Game) float64
-
 type MinMaxPlayer struct {
 	depth   int
-	valueFn ValueFn
+	valueFn game.ValueFn
 }
 
-func NewMinMaxPlayer(depth int, valueFn ValueFn) *MinMaxPlayer {
+func NewMinMaxPlayer(depth int, valueFn game.ValueFn) *MinMaxPlayer {
 	return &MinMaxPlayer{depth, valueFn}
 }
 
@@ -25,7 +23,7 @@ func (player *MinMaxPlayer) SelectMove(game game.Game) game.Move {
 	return move
 }
 
-func negaMax(valueFn ValueFn, g game.Game, depth int, a float64, b float64) (float64, game.Move) {
+func negaMax(valueFn game.ValueFn, g game.Game, depth int, a float64, b float64) (float64, game.Move) {
 	if finished, winner := g.IsGameFinished(); finished {
 		return INFINITY * float64(winner*g.GetCurrentPlayerColor()), game.Move(-1)
 	}

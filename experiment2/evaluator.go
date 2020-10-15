@@ -20,8 +20,8 @@ type PlayerToCompare struct {
 }
 
 func Evaluator(
-	newValueFns chan *game.ValueFn,
-	bestValueFns chan *game.ValueFn,
+	newValueFns chan game.ValueFn,
+	bestValueFns chan game.ValueFn,
 	gameFactory runner.NewGameFactory,
 	initialValueFn game.ValueFn,
 	playersToCompareWith []*PlayerToCompare,

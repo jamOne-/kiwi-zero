@@ -2,7 +2,6 @@ package reversiValueFns
 
 import (
 	"github.com/jamOne-/kiwi-zero/game"
-	"github.com/jamOne-/kiwi-zero/minMaxPlayer"
 	"github.com/jamOne-/kiwi-zero/predictor"
 	"github.com/jamOne-/kiwi-zero/reversi"
 )
@@ -46,7 +45,7 @@ func ReversiToOneHotBoard(reversiGame *reversi.ReversiGame) game.Features {
 	return reversiGame.OneHotBoard()
 }
 
-func CreateMinMaxValueFn(gameToFeaturesFn game.GameToFeaturesFn, predictor predictor.Predictor) minMaxPlayer.ValueFn {
+func CreateMinMaxValueFn(gameToFeaturesFn game.GameToFeaturesFn, predictor predictor.Predictor) game.ValueFn {
 	return func(g game.Game) float64 {
 		features := gameToFeaturesFn(g)
 		prediction := predictor.Predict(features)

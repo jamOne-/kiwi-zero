@@ -5,7 +5,7 @@ type Field = int8
 type Move = Field
 type Features = [][][]float32
 type GameToFeaturesFn func(game Game) Features
-type ValueFn func(game Game) float32
+type ValueFn func(game Game) float64
 
 type Game interface {
 	Copy() Game
