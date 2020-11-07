@@ -37,16 +37,6 @@ func main() {
 	rand.Seed(time.Now().UnixNano())
 	initConfig()
 
-	// f, err := os.Create("cpu.prof")
-	// if err != nil {
-	// 	log.Fatal("could not create CPU profile: ", err)
-	// }
-	// defer f.Close() // error handling omitted for example
-	// if err := pprof.StartCPUProfile(f); err != nil {
-	// 	log.Fatal("could not start CPU profile: ", err)
-	// }
-	// defer pprof.StopCPUProfile()
-
 	// INITIAL_WEIGHTS_PATH := viper.GetString("INITIAL_WEIGHTS_PATH")
 	MCTS_SIMULATIONS := viper.GetInt("MCTS_SIMULATIONS")
 	MINMAX_DEPTH := viper.GetInt("MINMAX_DEPTH")
@@ -87,6 +77,18 @@ func main() {
 	go Optimizer(gameResultsChan, newValueFnsChan, gameToFeaturesFn, resultsDirPath)
 	go Evaluator(newValueFnsChan, bestValueFnsChan, reversiGameFactory, initialValueFn, playersToCompareWith, resultsDirPath)
 	bestValueFnsChan <- initialValueFn
+
+	// f, err := os.Create("cpu.prof")
+	// if err != nil {
+	// 	log.Fatal("could not create CPU profile: ", err)
+	// }
+	// if err := pprof.StartCPUProfile(f); err != nil {
+	// 	log.Fatal("could not start CPU profile: ", err)
+	// }
+
+	// time.Sleep(20 * time.Minute)
+	// pprof.StopCPUProfile()
+	// f.Close()
 
 	var waitGroup sync.WaitGroup
 	waitGroup.Add(1)

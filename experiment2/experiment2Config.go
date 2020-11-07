@@ -19,7 +19,7 @@ func initConfig() {
 	viper.SetDefault("SELFPLAY_GAMES_AT_ONCE", 4)
 	viper.SetDefault("TRAINING_MODE", "extended") // "normal" | "triangle" | "extended"
 	// viper.SetDefault("TRAINING_TRANSFORM_POSITIONS", true)
-	viper.SetDefault("OLD_MINMAX_MODEL_PATH", "./results/2020-11-05-235909/models/250")
+	// viper.SetDefault("OLD_MINMAX_MODEL_PATH", "./results/2020-11-05-235909/models/250")
 
 	viper.SetDefault("OPTIMIZER_BATCH_SIZE", 16)
 	viper.SetDefault("OPTIMIZER_FLIP_POSITIONS_PROB", 0)

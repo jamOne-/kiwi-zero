@@ -44,10 +44,6 @@ func SelfPlayLoop(
 				SELFPLAY_GAMES_AT_ONCE,
 			)
 
-			// if selfPlay_i == 2 {
-			// 	pprof.StopCPUProfile()
-			// }
-
 			fmt.Printf("Selfplay (%d): finished %d games\n", selfPlay_i, GAMES_PER_ITERATION)
 
 			selfPlay_i += 1
