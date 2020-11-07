@@ -75,7 +75,7 @@ func (reversiGame *ReversiGame) MakeMove(move game.Move) (bool, game.PlayerColor
 }
 
 func (reversiGame *ReversiGame) GetPossibleMoves() []game.Move {
-	result := make([]game.Field, 0, 8)
+	result := make([]game.Field, 0)
 	result = append(result, PASS_MOVE)
 
 	for field := int8(0); field < TOTAL_SIZE; field++ {
@@ -158,7 +158,7 @@ func (reversiGame *ReversiGame) CountPawns() (int8, int8) {
 
 func getKilledPawns(board []game.Field, start game.Field, player game.PlayerColor) []game.Field {
 	opponent := player * -1
-	result := make([]game.Field, 0, 4)
+	result := make([]game.Field, 0)
 	startY, startX := getYX(start)
 	deltas := []int8{-1, 0, 1}
 
@@ -168,7 +168,7 @@ func getKilledPawns(board []game.Field, start game.Field, player game.PlayerColo
 				continue
 			}
 
-			candidates := make([]game.Field, 0, 4)
+			candidates := make([]game.Field, 0)
 
 			for y, x := startY+dy, startX+dx; x >= 0 && x < BOARD_SIZE && y >= 0 && y < BOARD_SIZE; y, x = y+dy, x+dx {
 				field := yXToField(y, x)
@@ -190,29 +190,43 @@ func getKilledPawns(board []game.Field, start game.Field, player game.PlayerColo
 }
 
 func (game *ReversiGame) DrawBoard() {
-	output := ""
+	board := ""
 
 	for field := 0; field < TOTAL_SIZE; field++ {
 		switch game.Board[field] {
 		case EMPTY:
-			output += "."
+			board += "."
 		case BLACK:
-			output += "x"
+			board += "x"
 		case WHITE:
-			output += "o"
+			board += "o"
 		}
 	}
 
 	for _, move := range game.GetPossibleMoves() {
 		if move != -1 {
-			output = output[:move] + "+" + output[move+1:]
+			board = board[:move] + "+" + board[move+1:]
 		}
 	}
 
-	for line := 0; line < BOARD_SIZE; line++ {
-		start := line * BOARD_SIZE
+	fmt.Println("   0 1 2 3 4 5 6 7")
 
-		fmt.Println(output[start : start+BOARD_SIZE])
+	for row := 0; row < BOARD_SIZE; row++ {
+		start := row * BOARD_SIZE
+
+		if row < 2 {
+			fmt.Printf(" %d ", row*8)
+		} else {
+			fmt.Printf("%d ", row*8)
+		}
+
+		line := board[start : start+BOARD_SIZE]
+
+		for _, field := range line {
+			fmt.Printf("%c ", field)
+		}
+
+		fmt.Printf("\n")
 	}
 }
 
@@ -239,11 +253,11 @@ func (game *ReversiGame) OneHotBoard() [][][]float32 {
 		for col := int8(0); col < BOARD_SIZE; col++ {
 			field := game.Board[yXToField(row, col)]
 
-			oneHotField := []float32{0, 0}
+			oneHotField := []float32{0, 1, 0}
 			if field == -1 {
-				oneHotField = []float32{1, 0}
+				oneHotField = []float32{1, 0, 0}
 			} else if field == 1 {
-				oneHotField = []float32{0, 1}
+				oneHotField = []float32{0, 0, 1}
 			}
 
 			oneHotBoard[row][col] = oneHotField

@@ -9,6 +9,10 @@ import (
 	"sync"
 	"time"
 
+	tfpredictor "github.com/jamOne-/kiwi-zero/TFPredictor"
+	"github.com/jamOne-/kiwi-zero/minMaxPlayer"
+	"github.com/jamOne-/kiwi-zero/player"
+
 	"github.com/jamOne-/kiwi-zero/game"
 	"github.com/jamOne-/kiwi-zero/monteCarloTreeSearchPlayer"
 	"github.com/jamOne-/kiwi-zero/reversi"
@@ -33,11 +37,22 @@ func main() {
 	rand.Seed(time.Now().UnixNano())
 	initConfig()
 
+	// f, err := os.Create("cpu.prof")
+	// if err != nil {
+	// 	log.Fatal("could not create CPU profile: ", err)
+	// }
+	// defer f.Close() // error handling omitted for example
+	// if err := pprof.StartCPUProfile(f); err != nil {
+	// 	log.Fatal("could not start CPU profile: ", err)
+	// }
+	// defer pprof.StopCPUProfile()
+
 	// INITIAL_WEIGHTS_PATH := viper.GetString("INITIAL_WEIGHTS_PATH")
 	MCTS_SIMULATIONS := viper.GetInt("MCTS_SIMULATIONS")
-	// MINMAX_DEPTH := viper.GetInt("MINMAX_DEPTH")
+	MINMAX_DEPTH := viper.GetInt("MINMAX_DEPTH")
 	// OLD_MINMAX_WEIGHTS_PATH := viper.GetString("OLD_MINMAX_WEIGHTS_PATH")
 	// OLD_MINMAX_WEIGHTS_MODE := viper.GetString("OLD_MINMAX_WEIGHTS_MODE")
+	OLD_MINMAX_MODEL_PATH := viper.GetString("OLD_MINMAX_MODEL_PATH")
 	RESULTS_DIR_NAME := viper.GetString("RESULTS_DIR_NAME")
 	// TRAINING_MODE := viper.GetString("TRAINING_MODE")
 
@@ -51,30 +66,27 @@ func main() {
 	// }
 
 	initialValueFn := getInitialValueFn()
+	gameToFeaturesFn := reversiValueFns.ConvertReversiFnToGeneralFeatuersFn(reversiValueFns.ReversiToOneHotBoard)
 
 	playersToCompareWith := make([]*PlayerToCompare, 0)
-
 	mctsPlayer := monteCarloTreeSearchPlayer.NewMonteCarloTreeSearchPlayer(MCTS_SIMULATIONS)
 	playersToCompareWith = append(playersToCompareWith, &PlayerToCompare{fmt.Sprintf("MCTS (%d sims)", MCTS_SIMULATIONS), mctsPlayer})
 
-	// TODO: Add support for loading saved versions of players to compare with
-	// if OLD_MINMAX_WEIGHTS_PATH != "" {
-	// 	oldMinMaxWeights := reversiValueFns.LoadWeightsFromFile(OLD_MINMAX_WEIGHTS_PATH)
-	// 	oldMinMaxValueFn := reversiValueFns.CreateWeightedReversiFn(REVERSI_TO_FEATURES_BY_MODE[OLD_MINMAX_WEIGHTS_MODE], oldMinMaxWeights)
-	// 	oldMinMaxPlayer := minMaxPlayer.NewMinMaxPlayer(MINMAX_DEPTH, oldMinMaxValueFn)
-
-	// 	playersToCompareWith = append(playersToCompareWith, &PlayerToCompare{"OLD MinMax", oldMinMaxPlayer})
-	// }
+	// TODO: Add support for loading different gameToFeaturesFn!
+	if OLD_MINMAX_MODEL_PATH != "" {
+		oldMinMaxPlayer := loadMinMaxPlayer(gameToFeaturesFn, OLD_MINMAX_MODEL_PATH, MINMAX_DEPTH)
+		playersToCompareWith = append(playersToCompareWith, &PlayerToCompare{"OLD MinMax", oldMinMaxPlayer})
+	}
 
 	bestValueFnsChan := make(chan game.ValueFn)
 	gameResultsChan := make(chan *runner.GameResultsBatch)
 	newValueFnsChan := make(chan game.ValueFn)
 	// reversiToFeaturesFn := REVERSI_TO_FEATURES_BY_MODE[TRAINING_MODE]
-	gameToFeaturesFn := reversiValueFns.ConvertReversiFnToGeneralFeatuersFn(reversiValueFns.ReversiToOneHotBoard)
 
 	go SelfPlayLoop(bestValueFnsChan, gameResultsChan, reversiGameFactory, initialValueFn)
 	go Optimizer(gameResultsChan, newValueFnsChan, gameToFeaturesFn, resultsDirPath)
 	go Evaluator(newValueFnsChan, bestValueFnsChan, reversiGameFactory, initialValueFn, playersToCompareWith, resultsDirPath)
+	bestValueFnsChan <- initialValueFn
 
 	var waitGroup sync.WaitGroup
 	waitGroup.Add(1)
@@ -101,4 +113,11 @@ func getInitialValueFn() game.ValueFn {
 	return func(game game.Game) float64 {
 		return 0.5
 	}
+}
+
+func loadMinMaxPlayer(gameToFeatures game.GameToFeaturesFn, path string, depth int) player.Player {
+	predictor := tfpredictor.NewTFPredictor(path)
+	valueFn := reversiValueFns.CreateMinMaxValueFn(gameToFeatures, predictor)
+
+	return minMaxPlayer.NewMinMaxPlayer(depth, valueFn)
 }

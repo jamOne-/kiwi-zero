@@ -50,8 +50,7 @@ func CreateMinMaxValueFn(gameToFeaturesFn game.GameToFeaturesFn, predictor predi
 		features := gameToFeaturesFn(g)
 		prediction := predictor.Predict(features)
 
-		// TODO
-		return float64(prediction)
+		return float64(prediction)*2.0 - 1.0
 	}
 }
 

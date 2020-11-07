@@ -9,8 +9,8 @@ def add_ResidualLayer(inputs, filters):
         padding='same',
         # use_bias=False
     )(inputs)
-    x = layers.BatchNormalization()(x)
-    x = layers.Activation('relu')(x)
+    # x = layers.BatchNormalization()(x)
+    # x = layers.Activation('relu')(x)
 
     x = layers.Conv2D(
         filters,
@@ -18,9 +18,9 @@ def add_ResidualLayer(inputs, filters):
         padding='same',
         # use_bias=False
     )(x)
-    x = layers.BatchNormalization()(x)
+    # x = layers.BatchNormalization()(x)
 
-    x = layers.add([x, inputs])
+    # x = layers.add([x, inputs])
     x = layers.Activation('relu')(x)
 
     return x
@@ -33,8 +33,8 @@ def add_ValueHead(model, filters):
         padding='same',
         # use_bias=False
     )(model)
-    model = layers.BatchNormalization()(model)
-    model = layers.Activation('relu')(model)
+    # model = layers.BatchNormalization()(model)
+    # model = layers.Activation('relu')(model)
     model = layers.Flatten()(model)
     model = layers.Dense(filters, activation='relu')(model)
     model = layers.Flatten()(model)
@@ -92,6 +92,30 @@ def get_model(
         inputs=inputs,
         outputs=outputs,
         name='kiwi-zero'
+    )
+
+    return ret
+
+
+def get_fully_connected_model(
+    input_shape=(8, 8, 3),
+    layers_count=1,
+    layer_units=128,
+    dropout_rate=0.5,
+):
+    inputs = layers.Input(shape=input_shape)
+    model = layers.Flatten()(inputs)
+
+    for i in range(layers_count - 1):
+        model = layers.Dense(layer_units, activation='relu')(model)
+        model = layers.Dropout(dropout_rate)(model)
+
+    model = layers.Dense(1, activation='sigmoid', name='value_out')(model)
+
+    ret = models.Model(
+        inputs=inputs,
+        outputs=[model],
+        name='kiwi-zero-fc',
     )
 
     return ret

@@ -60,6 +60,8 @@ func Evaluator(
 			}
 
 			bestValueFns <- newValueFn
+		} else {
+			bestValueFns <- nil
 		}
 
 		if CHECKPOINT_EVERY > 0 && evaluator_i%CHECKPOINT_EVERY == 0 {

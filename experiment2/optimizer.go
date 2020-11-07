@@ -33,10 +33,9 @@ func Optimizer(
 	resultsDirPath string,
 ) {
 	MAX_HISTORY_LENGTH := viper.GetInt("MAX_HISTORY_LENGTH")
-	TRAINING_SIZE := viper.GetInt("TRAINING_SIZE")
-	// TRAINING_FLIP_POSITIONS_PROB := viper.GetFloat64("TRAINING_FLIP_POSITIONS_PROB")
+	TRAINING_SIZE := viper.GetInt("OPTIMIZER_TRAINING_SIZE")
+	FLIP_POSITIONS_PROB := viper.GetFloat64("OPTIMIZER_FLIP_POSITIONS_PROB")
 	// TRAINING_TRANSFORM_POSITIONS := viper.GetBool("TRAINING_TRANSFORM_POSITIONS")
-	SGD_CONFIG := viper.Get("SGD_CONFIG").(map[string]float64)
 
 	// Create models directory for current run
 	modelsDirPath := filepath.Join(resultsDirPath, "models")
@@ -47,10 +46,15 @@ func Optimizer(
 
 	pythonOptimizerCmd := exec.Command(
 		"python3", "../python/optimizer/optimizer.py",
-		"--learning_rate", fmt.Sprintf("%f", SGD_CONFIG["alpha0"]),
-		"--epochs", strconv.Itoa(int(SGD_CONFIG["max_epochs"])),
-		"--batch_size", strconv.Itoa(int(SGD_CONFIG["batch_size"])),
 		"--models_directory", modelsDirPath,
+		"--input_shape", viper.GetString("OPTIMIZER_INPUT_SHAPE"),
+		"--learning_rate", fmt.Sprintf("%f", viper.GetFloat64("OPTIMIZER_LEARNING_RATE")),
+		"--epochs", strconv.Itoa(viper.GetInt("OPTIMIZER_MAX_EPOCHS")),
+		"--batch_size", strconv.Itoa(viper.GetInt("OPTIMIZER_BATCH_SIZE")),
+		"--fully_connected", strconv.FormatBool(viper.GetBool("OPTIMIZER_FULLY_CONNECTED")),
+		"--fc_layers_count", strconv.Itoa(viper.GetInt("OPTIMIZER_FC_LAYERS_COUNT")),
+		"--fc_layer_units", strconv.Itoa(viper.GetInt("OPTIMIZER_FC_LAYER_UNITS")),
+		"--fc_dropout", fmt.Sprintf("%f", viper.GetFloat64("OPTIMIZER_FC_DROPOUT")),
 	)
 
 	fmt.Println("Args: " + strings.Join(pythonOptimizerCmd.Args, " "))
@@ -62,11 +66,8 @@ func Optimizer(
 	newModelPathChan := make(chan string)
 	go trainer(trainingChan, optimizerIn, optimizerOut, newModelPathChan)
 	go valueFnsCreator(newModelPathChan, valueFnsChan, gameToFeaturesFn)
-	// go optimizerReader(optimizerOut, newWeightsChan)
-	// go echoReader(optimizerOut)
-	pythonOptimizerCmd.Start()
 
-	// training_i := 1
+	pythonOptimizerCmd.Start()
 
 	for {
 		select {
@@ -78,9 +79,9 @@ func Optimizer(
 			// 	transformPositions(positions)
 			// }
 
-			// if TRAINING_FLIP_POSITIONS_PROB > 0 {
-			// 	flipPositionsColors(TRAINING_FLIP_POSITIONS_PROB, positions, winners)
-			// }
+			if FLIP_POSITIONS_PROB > 0 {
+				flipPositionsColors(FLIP_POSITIONS_PROB, positions, winners)
+			}
 
 			// transform -1, 0, 1 winners to black winning probability
 			transformWinnersToProbabilities(winners)
@@ -99,15 +100,15 @@ func Optimizer(
 			Xs, ys := chooseXsAndys(gameFeatures, gameWinners, TRAINING_SIZE)
 			params := &trainingParams{Xs, ys}
 
-			// trainingChan <- params
+			trainingChan <- params
 
-			select {
-			case trainingChan <- params:
-				// try to send
+			// select {
+			// case trainingChan <- params:
+			// 	// try to send
 
-			default:
-				// else skip
-			}
+			// default:
+			// 	// else skip
+			// }
 		}
 	}
 }
@@ -196,8 +197,7 @@ func flipPositionsColors(flipProb float64, positions []game.Game, winners []floa
 	for i, position := range positions {
 		if rand.Float64() < flipProb {
 			flipGameColors(position)
-			winners[i] = 1.0 - winners[i]
-			// winners[i] *= -1
+			winners[i] *= -1
 		}
 	}
 }
@@ -210,18 +210,6 @@ func flipGameColors(g game.Game) {
 		reversiGame.Board[i] = color * -1
 	}
 }
-
-// func parseWeights(weightsString string) game.Features {
-// 	splitted := strings.Split(weightsString, " ")
-// 	weights := mat.NewVecDense(len(splitted), nil)
-
-// 	for i, s := range splitted {
-// 		weight, _ := strconv.ParseFloat(s, 64)
-// 		weights.SetVec(i, weight)
-// 	}
-
-// 	return weights
-// }
 
 func trainer(
 	paramsChan chan *trainingParams,
@@ -263,13 +251,14 @@ func trainer(
 		fmt.Printf("Optimizer (%d): %s\n", training_i, trainingSummary)
 		training_i += 1
 
-		select {
-		case newModelPathChan <- newModelPath:
-			// try to send
+		newModelPathChan <- newModelPath
+		// select {
+		// case newModelPathChan <- newModelPath:
+		// 	// try to send
 
-		default:
-			// else skip
-		}
+		// default:
+		// 	// else skip
+		// }
 
 		// sgdResult := sgd.SGD(sgd.MeanSquaredErrorWithGradient, bestWeights, Xs, ys, SGD_CONFIG)
 		// bestWeights = sgdResult.BestWeights
@@ -293,12 +282,13 @@ func valueFnsCreator(
 		predictor := tfpredictor.NewTFPredictor(path)
 		valueFn := reversiValueFns.CreateMinMaxValueFn(gameToFeatures, predictor)
 
-		select {
-		case valueFns <- valueFn:
-			// try to send
+		valueFns <- valueFn
+		// select {
+		// case valueFns <- valueFn:
+		// 	// try to send
 
-		default:
-			// else skip
-		}
+		// default:
+		// 	// else skip
+		// }
 	}
 }

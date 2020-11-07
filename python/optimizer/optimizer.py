@@ -4,15 +4,22 @@ import os
 import Model
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--weights', default='72', type=int)
+parser.add_argument('--logfile', default='optimizer_log.txt', type=str)
+parser.add_argument('--models_directory', type=str)
+
 parser.add_argument('--learning_rate', default='1e-3', type=float)
 parser.add_argument('--epochs', default='1000', type=int)
 parser.add_argument('--batch_size', default='16', type=int)
-parser.add_argument('--logfile', default='optimizer_log.txt', type=str)
+parser.add_argument('--input_shape', default="(8, 8, 3)", type=str)
+
 parser.add_argument('--res_layers_count', default='1', type=int)
 parser.add_argument('--filters', default='32', type=int)
 parser.add_argument('--add_policy_head', default=False, type=bool)
-parser.add_argument('--models_directory', type=str)
+
+parser.add_argument('--fully_connected', default=True, type=bool)
+parser.add_argument('--fc_dropout', default=0.5, type=float)
+parser.add_argument('--fc_layers_count', default=3, type=int)
+parser.add_argument('--fc_layer_units', default=128, type=int)
 args = parser.parse_args()
 
 stdout = sys.stdout
@@ -20,20 +27,11 @@ sys.stdout = open(args.logfile, 'w')
 sys.stderr = sys.stdout
 # os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
-
 import numpy as np
 import tensorflow as tf
 # import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from tensorflow.keras import layers
-
-
-def get_model(input_shape):
-    model = tf.keras.Sequential()
-    model.add(layers.Dense(1, activation="sigmoid", use_bias=False,
-                           input_shape=input_shape, name="output"))
-
-    return model
 
 
 def train_model(args, model, Xs, ys):
@@ -56,8 +54,6 @@ def train_model(args, model, Xs, ys):
         verbose=2
     )
 
-    # predicted = model.predict(X_test)
-    # test_accuracy = sum(predicted == y_test) / (y_test.shape[0])
     test_accuracy = model.evaluate(x=X_test, y=y_test)
     loss = history.history["loss"][-1]
     accuracy = history.history["accuracy"][-1]
@@ -66,22 +62,6 @@ def train_model(args, model, Xs, ys):
 
     print("Finished after {} epochs: loss={}, accuracy={}, val_loss={}, val_accuracy={}, test_acc={}".format(
         len(history.history["loss"]), loss, accuracy, val_loss, val_accuracy, test_accuracy), file=stdout)
-
-
-def encode_field(field):
-    if field == 0:
-        return [0, 0]
-    elif field == -1:
-        return [1, 0]
-    else:
-        return [0, 1]
-
-
-def change_board_representation(board_in_row):
-    return [
-        [encode_field(board_in_row[y * 8 + x]) for x in range(8)]
-        for y in range(8)
-    ]
 
 
 def read_features(Xs_shape):
@@ -94,12 +74,22 @@ def read_features(Xs_shape):
 
 
 if __name__ == "__main__":
-    model = Model.get_model(
-        input_shape=(8, 8, 2),
-        res_layers_count=args.res_layers_count,
-        filters=args.filters,
-        add_policy_head=args.add_policy_head,
-    )
+    input_shape = eval(args.input_shape) # ev(a/i)l :-)
+
+    if args.fully_connected:
+        model = Model.get_fully_connected_model(
+            input_shape=input_shape,
+            layers_count=args.fc_layers_count,
+            layer_units=args.fc_layer_units,
+            dropout_rate=args.fc_dropout,
+        )
+    else:
+        model = Model.get_model(
+            input_shape=input_shape,
+            res_layers_count=args.res_layers_count,
+            filters=args.filters,
+            add_policy_head=args.add_policy_head,
+        )
 
     # TODO: handle policy_out
     loss_dict = {
@@ -116,7 +106,6 @@ if __name__ == "__main__":
     iteration = 0
     while True:
         Xs_shape = list(map(int, input().rstrip().split(" ")))
-        print(Xs_shape)
         Xs = read_features(Xs_shape)
 
         ys = [float(input().rstrip()) for i in range(Xs_shape[0])]
@@ -127,8 +116,6 @@ if __name__ == "__main__":
         model_path = "{}/{}".format(args.models_directory, iteration)
         Model.save_model_to_file(model, model_path)
         print(model_path, file=stdout, flush=True)
-
-        print(model_path)
 
         iteration += 1
 

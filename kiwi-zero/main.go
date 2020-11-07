@@ -4,9 +4,12 @@ import (
 	"fmt"
 	"time"
 
+	tfpredictor "github.com/jamOne-/kiwi-zero/TFPredictor"
+	"github.com/jamOne-/kiwi-zero/monteCarloTreeSearchPlayer"
+	"github.com/jamOne-/kiwi-zero/reversiValueFns"
+
 	"github.com/jamOne-/kiwi-zero/game"
 	"github.com/jamOne-/kiwi-zero/minMaxPlayer"
-	"github.com/jamOne-/kiwi-zero/monteCarloTreeSearchPlayer"
 	"github.com/jamOne-/kiwi-zero/reversi"
 )
 
@@ -15,14 +18,22 @@ func main() {
 	times1, times2 := make([]time.Duration, 32), make([]time.Duration, 32)
 	NUMBER_OF_GAMES := 10
 
+	gameToFeaturesFn := reversiValueFns.ConvertReversiFnToGeneralFeatuersFn(reversiValueFns.ReversiToOneHotBoard)
+	// 1 layer:
+	tfpredictor := tfpredictor.NewTFPredictor("../experiment2/results/2020-11-04-211132/models/150")
+	valueFn := reversiValueFns.CreateMinMaxValueFn(gameToFeaturesFn, tfpredictor)
+
 	for gameNumber := 0; gameNumber < NUMBER_OF_GAMES; gameNumber += 1 {
-		g := reversi.NewGame()
+		g := reversi.NewReversiGame()
+		// player1 := humanPlayer.NewHumanPlayer()
 		player1 := monteCarloTreeSearchPlayer.NewThreadedMonteCarloTreeSearchPlayer(1000, 4)
 		// player2 := minMaxPlayer.NewPredictorMinMaxPlayer(4)
-		player2 := minMaxPlayer.NewMinMaxPlayer(7)
+		// player2 := minMaxPlayer.NewMinMaxPlayer(7)
 		// player2 := randomPlayer.NewRandomPlayer()
 
-		// game.DrawBoard()
+		player2 := minMaxPlayer.NewMinMaxPlayer(4, valueFn)
+
+		// g.DrawBoard()
 		// fmt.Println("")
 
 		finished, winner := false, int8(0)
@@ -39,10 +50,10 @@ func main() {
 				times2 = append(times2, time.Since(start))
 			}
 
-			// fmt.Printf("player %d was thinking for %s\n", (-g.Turn+1)/2+1, time.Since(start))
-			// fmt.Println(move)
+			fmt.Printf("player %d was thinking for %s\n", (-g.Turn+1)/2+1, time.Since(start))
+			fmt.Println(move)
 			finished, winner = g.MakeMove(move)
-			// game.DrawBoard()
+			// g.DrawBoard()
 			// fmt.Println("")
 		}
 

@@ -30,9 +30,11 @@ func SelfPlayLoop(
 	for {
 		select {
 		case valueFn := <-bestValueFns:
-			selfPlayPlayer = minMaxPlayer.NewEpsilonGreedyMinMaxPlayer(MINMAX_DEPTH, EPSILON, valueFn)
+			if valueFn != nil {
+				selfPlayPlayer = minMaxPlayer.NewEpsilonGreedyMinMaxPlayer(MINMAX_DEPTH, EPSILON, valueFn)
+			}
 
-		default:
+			// default:
 			results, totalPositions := runner.PlayNGamesAsync(
 				gameFactory,
 				/* saveHistory */ true,
@@ -42,18 +44,22 @@ func SelfPlayLoop(
 				SELFPLAY_GAMES_AT_ONCE,
 			)
 
+			// if selfPlay_i == 2 {
+			// 	pprof.StopCPUProfile()
+			// }
+
 			fmt.Printf("Selfplay (%d): finished %d games\n", selfPlay_i, GAMES_PER_ITERATION)
 
 			selfPlay_i += 1
 			resultsBatch := &runner.GameResultsBatch{Results: results, TotalPositions: totalPositions}
 
-			// gameResults <- resultsBatch
-			select {
-			case gameResults <- resultsBatch:
-				// try to send
-			default:
-				// else skip
-			}
+			gameResults <- resultsBatch
+			// select {
+			// case gameResults <- resultsBatch:
+			// 	// try to send
+			// default:
+			// 	// else skip
+			// }
 		}
 	}
 }
