@@ -49,7 +49,7 @@ func Evaluator(
 
 		fmt.Printf("Evaluator (%d): New candidate won %d/%d games\n", evaluator_i, newPlayerWins, EVALUATOR_GAMES)
 
-		if float64(newPlayerWins)/float64(EVALUATOR_GAMES) >= 0.55 {
+		if float64(newPlayerWins)/float64(EVALUATOR_GAMES) >= 0.6 {
 			fmt.Printf("Evaluator (%d): 🎉 New candidate is the new best player 🎉\n", evaluator_i)
 
 			bestPlayer = newPlayer

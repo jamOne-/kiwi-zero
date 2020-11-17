@@ -266,3 +266,9 @@ func (game *ReversiGame) OneHotBoard() [][][]float32 {
 
 	return oneHotBoard
 }
+
+func GameMoveToPolicy(move game.Move) []float32 {
+	policy := make([]float32, 65) // 8*8+1
+	policy[move+1] = 1            // move + 1, because pass is -1
+	return policy
+}

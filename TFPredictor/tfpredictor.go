@@ -27,7 +27,7 @@ func (predictor *TFPredictor) Predict(features predictor.Features) float32 {
 	}
 
 	results := model.Exec([]tf.Output{
-		model.Op("StatefulPartitionedCall", 0), // TODO
+		model.Op("StatefulPartitionedCall", 1), // TODO: 0 -- policy, 1 -- value
 	}, map[tf.Output]*tf.Tensor{
 		model.Op("serving_default_input_1", 0): inputTensor, // TODO
 	})

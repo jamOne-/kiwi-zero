@@ -34,19 +34,19 @@ from sklearn.model_selection import train_test_split
 from tensorflow.keras import layers
 
 
-def train_model(args, model, Xs, ys):
-    X_train, X_test, y_train, y_test = train_test_split(Xs, ys, test_size=0.2)
+def train_model(args, model, Xs, ys, policies):
+    X_train, X_test, y_train, y_test, policies_train, policies_test = train_test_split(Xs, ys, policies, test_size=0.2)
 
     callbacks = [
         tf.keras.callbacks.EarlyStopping(
             patience=10,
-            monitor='val_loss'
+            monitor='val_value_out_loss'
         )
     ]
 
     history = model.fit(
         X_train,
-        y_train,
+        y={"value_out": y_train, "policy_out": policies_train},
         epochs=args.epochs,
         batch_size=args.batch_size,
         validation_split=0.2,
@@ -54,14 +54,16 @@ def train_model(args, model, Xs, ys):
         verbose=2
     )
 
-    test_accuracy = model.evaluate(x=X_test, y=y_test)
+    test_accuracy = model.evaluate(x=X_test, y={"value_out": y_test, "policy_out": policies_test})
     loss = history.history["loss"][-1]
-    accuracy = history.history["accuracy"][-1]
+    value_accuracy = history.history["value_out_accuracy"][-1]
+    policy_accuracy = history.history["policy_out_accuracy"][-1]
     val_loss = history.history["val_loss"][-1]
-    val_accuracy = history.history["val_accuracy"][-1]
+    val_value_accuracy = history.history["val_value_out_accuracy"][-1]
+    val_policy_accuracy = history.history["val_policy_out_accuracy"][-1]
 
-    print("Finished after {} epochs: loss={}, accuracy={}, val_loss={}, val_accuracy={}, test_acc={}".format(
-        len(history.history["loss"]), loss, accuracy, val_loss, val_accuracy, test_accuracy), file=stdout)
+    print("Finished after {} epochs\n\t\t* loss={}, val_loss={}\n\t\t* value_acc={}, val_value_acc={}\n\t\t* policy_acc={}, val_policy_acc={}\n\t\t* test_acc={}".format(
+        len(history.history["loss"]), loss, val_loss, value_accuracy, val_value_accuracy, policy_accuracy, val_policy_accuracy, test_accuracy), file=stdout)
 
 
 def read_features(Xs_shape):
@@ -71,6 +73,11 @@ def read_features(Xs_shape):
           for i in range(Xs_shape[0])]
 
     return np.array(Xs)
+
+
+def read_policies(n):
+    policies = [list(map(float, input().rstrip().split(" "))) for i in range(n)]
+    return np.array(policies)
 
 
 if __name__ == "__main__":
@@ -91,15 +98,16 @@ if __name__ == "__main__":
             add_policy_head=args.add_policy_head,
         )
 
-    # TODO: handle policy_out
     loss_dict = {
         "value_out": "binary_crossentropy",
-        # "policy_out": "binary_crossentropy",
+        "policy_out": "categorical_crossentropy",
     }
+    loss_weights = {"value_out": 1.0, "policy_out": 0}
 
     model.compile(
         optimizer=tf.keras.optimizers.Adam(args.learning_rate),
         loss=loss_dict,
+        loss_weights=loss_weights,
         metrics=['accuracy']
     )
 
@@ -111,7 +119,9 @@ if __name__ == "__main__":
         ys = [float(input().rstrip()) for i in range(Xs_shape[0])]
         ys = np.array(ys)
 
-        train_model(args, model, Xs, ys)
+        policies = read_policies(Xs_shape[0])
+
+        train_model(args, model, Xs, ys, policies)
 
         model_path = "{}/{}".format(args.models_directory, iteration)
         Model.save_model_to_file(model, model_path)

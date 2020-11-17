@@ -13,8 +13,13 @@ type GameResultsBatch struct {
 	TotalPositions int
 }
 
+type HistoryTuple struct {
+	Game game.Game
+	Move game.Move
+}
+
 type GameResult struct {
-	History []game.Game
+	History []*HistoryTuple
 	Winner  game.PlayerColor
 }
 
@@ -27,11 +32,7 @@ func PlayGame(
 	saveHistory bool,
 ) *GameResult {
 	finished, winner := false, game.PlayerColor(0)
-	history := make([]game.Game, 0)
-
-	if saveHistory {
-		history = append(history, g.Copy())
-	}
+	history := make([]*HistoryTuple, 0)
 
 	for !finished {
 		currentPlayer := g.GetCurrentPlayerColor()
@@ -43,11 +44,12 @@ func PlayGame(
 			move = whitePlayer.SelectMove(g)
 		}
 
-		finished, winner = g.MakeMove(move)
-
 		if saveHistory {
-			history = append(history, g.Copy())
+			tuple := &HistoryTuple{g.Copy(), move}
+			history = append(history, tuple)
 		}
+
+		finished, winner = g.MakeMove(move)
 	}
 
 	return &GameResult{history, winner}

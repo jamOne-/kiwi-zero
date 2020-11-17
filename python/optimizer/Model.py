@@ -106,15 +106,26 @@ def get_fully_connected_model(
     inputs = layers.Input(shape=input_shape)
     model = layers.Flatten()(inputs)
 
+    value_out = model
     for i in range(layers_count - 1):
-        model = layers.Dense(layer_units, activation='relu')(model)
-        model = layers.Dropout(dropout_rate)(model)
+        value_out = layers.Dense(layer_units, activation='relu')(value_out)
+        value_out = layers.Dropout(dropout_rate)(value_out)
+    value_out = layers.Dense(1, activation='sigmoid', name='value_out')(value_out)
 
-    model = layers.Dense(1, activation='sigmoid', name='value_out')(model)
+    policy_out = model
+    policy_out = layers.Dense(layer_units, activation='relu')(policy_out)
+    policy_out = layers.Dropout(dropout_rate)(policy_out)
+    policy_out = layers.Dense(layer_units, activation='relu')(policy_out)
+    policy_out = layers.Dropout(dropout_rate)(policy_out)
+    policy_out = layers.Dense(layer_units, activation='relu')(policy_out)
+    policy_out = layers.Dropout(dropout_rate)(policy_out)
+    policy_out = layers.Dense(layer_units, activation='relu')(policy_out)
+    policy_out = layers.Dropout(dropout_rate)(policy_out)
+    policy_out = layers.Dense(65, activation='softmax', name='policy_out')(policy_out)
 
     ret = models.Model(
         inputs=inputs,
-        outputs=[model],
+        outputs=[value_out, policy_out],
         name='kiwi-zero-fc',
     )
 
