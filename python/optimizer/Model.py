@@ -101,26 +101,28 @@ def get_fully_connected_model(
     input_shape=(8, 8, 3),
     layers_count=1,
     layer_units=128,
-    dropout_rate=0.5,
+    dropout_rate=0.25,
 ):
     inputs = layers.Input(shape=input_shape)
-    model = layers.Flatten()(inputs)
+    inputs_flattened = layers.Flatten()(inputs)
+    
+    model = inputs_flattened
+    for i in range(layers_count - 1):
+        model = layers.Dense(layer_units, activation='relu')(model)
+        model = layers.Dropout(dropout_rate)(model)
 
     value_out = model
-    for i in range(layers_count - 1):
-        value_out = layers.Dense(layer_units, activation='relu')(value_out)
-        value_out = layers.Dropout(dropout_rate)(value_out)
+    # value_out = layers.Dense(layer_units, activation='relu')(value_out)
+    # value_out = layers.Dropout(dropout_rate)(value_out)
+    # value_out = layers.Dense(layer_units, activation='relu')(value_out)
+    # value_out = layers.Dropout(dropout_rate)(value_out)
     value_out = layers.Dense(1, activation='sigmoid', name='value_out')(value_out)
 
-    policy_out = model
-    policy_out = layers.Dense(layer_units, activation='relu')(policy_out)
-    policy_out = layers.Dropout(dropout_rate)(policy_out)
-    policy_out = layers.Dense(layer_units, activation='relu')(policy_out)
-    policy_out = layers.Dropout(dropout_rate)(policy_out)
-    policy_out = layers.Dense(layer_units, activation='relu')(policy_out)
-    policy_out = layers.Dropout(dropout_rate)(policy_out)
-    policy_out = layers.Dense(layer_units, activation='relu')(policy_out)
-    policy_out = layers.Dropout(dropout_rate)(policy_out)
+    policy_out = inputs_flattened
+    # policy_out = layers.Dense(layer_units, activation='relu')(policy_out)
+    # policy_out = layers.Dropout(dropout_rate)(policy_out)
+    # policy_out = layers.Dense(layer_units, activation='relu')(policy_out)
+    # policy_out = layers.Dropout(dropout_rate)(policy_out)
     policy_out = layers.Dense(65, activation='softmax', name='policy_out')(policy_out)
 
     ret = models.Model(
