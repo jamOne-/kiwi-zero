@@ -41,8 +41,41 @@ func ConvertReversiFnToGeneralFeatuersFn(reversiFn func(reversiGame *reversi.Rev
 	}
 }
 
-func ReversiToOneHotBoard(reversiGame *reversi.ReversiGame) game.Features {
+func ReversiToOneHotBoard3(reversiGame *reversi.ReversiGame) game.Features {
 	return reversiGame.OneHotBoard()
+}
+
+func ReversiToOneHotBoardMoves(game *reversi.ReversiGame) game.Features {
+	features := make([][][]float32, reversi.BOARD_SIZE)
+
+	for row := int8(0); row < reversi.BOARD_SIZE; row++ {
+		features[row] = make([][]float32, reversi.BOARD_SIZE)
+
+		for col := int8(0); col < reversi.BOARD_SIZE; col++ {
+			field := game.Board[reversi.YXToField(row, col)]
+
+			oneHotField := []float32{0, 0, 0}
+			if field == -1 {
+				oneHotField = []float32{1, 0, 0}
+			} else if field == 1 {
+				oneHotField = []float32{0, 1, 0}
+			}
+
+			features[row][col] = oneHotField
+		}
+	}
+
+	possibleMoves := game.GetPossibleMoves()
+	for _, move := range possibleMoves {
+		if move == -1 {
+			continue
+		}
+
+		y, x := reversi.GetYX(move)
+		features[y][x][2] = 1
+	}
+
+	return features
 }
 
 func CreateMinMaxValueFn(gameToFeaturesFn game.GameToFeaturesFn, predictor predictor.Predictor) game.ValueFn {

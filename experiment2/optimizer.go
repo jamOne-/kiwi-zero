@@ -33,7 +33,8 @@ func Optimizer(
 	gameToFeaturesFn game.GameToFeaturesFn,
 	resultsDirPath string,
 ) {
-	MAX_HISTORY_LENGTH := viper.GetInt("MAX_HISTORY_LENGTH")
+	MAX_HISTORY_LENGTH := viper.GetInt("OPTIMIZER_MAX_HISTORY_LENGTH")
+	MAX_POSITIONS_FROM_BATCH := viper.GetInt("OPTIMIZER_MAX_POSITIONS_FROM_BATCH")
 	TRAINING_SIZE := viper.GetInt("OPTIMIZER_TRAINING_SIZE")
 	FLIP_POSITIONS_PROB := viper.GetFloat64("OPTIMIZER_FLIP_POSITIONS_PROB")
 	// TRAINING_TRANSFORM_POSITIONS := viper.GetBool("TRAINING_TRANSFORM_POSITIONS")
@@ -89,6 +90,7 @@ func Optimizer(
 			transformWinnersToProbabilities(winners)
 
 			features := createFeaturesSlice(gameToFeaturesFn, positions)
+			features, winners, moves = chooseXsAndys(features, winners, moves, MAX_POSITIONS_FROM_BATCH)
 
 			gameFeatures = append(gameFeatures, features...)
 			gameWinners = append(gameWinners, winners...)

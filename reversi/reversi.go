@@ -26,11 +26,11 @@ const WHITE = game.Field(-1)
 const BLACK = game.Field(1)
 const PASS_MOVE = -1
 
-func getYX(field game.Field) (int8, int8) {
+func GetYX(field game.Field) (int8, int8) {
 	return field / BOARD_SIZE, field % BOARD_SIZE
 }
 
-func yXToField(y int8, x int8) game.Field {
+func YXToField(y int8, x int8) game.Field {
 	return y*BOARD_SIZE + x
 }
 
@@ -38,8 +38,8 @@ func NewReversiGame() *ReversiGame {
 	turn := BLACK
 	board := make([]game.Field, TOTAL_SIZE)
 	history := make([]*ReversiGameHistoryItem, 0, TOTAL_SIZE)
-	board[yXToField(3, 3)], board[yXToField(4, 4)] = WHITE, WHITE
-	board[yXToField(3, 4)], board[yXToField(4, 3)] = BLACK, BLACK
+	board[YXToField(3, 3)], board[YXToField(4, 4)] = WHITE, WHITE
+	board[YXToField(3, 4)], board[YXToField(4, 3)] = BLACK, BLACK
 
 	return &ReversiGame{turn, board, history}
 }
@@ -159,7 +159,7 @@ func (reversiGame *ReversiGame) CountPawns() (int8, int8) {
 func getKilledPawns(board []game.Field, start game.Field, player game.PlayerColor) []game.Field {
 	opponent := player * -1
 	result := make([]game.Field, 0)
-	startY, startX := getYX(start)
+	startY, startX := GetYX(start)
 	deltas := []int8{-1, 0, 1}
 
 	for _, dy := range deltas {
@@ -171,7 +171,7 @@ func getKilledPawns(board []game.Field, start game.Field, player game.PlayerColo
 			candidates := make([]game.Field, 0)
 
 			for y, x := startY+dy, startX+dx; x >= 0 && x < BOARD_SIZE && y >= 0 && y < BOARD_SIZE; y, x = y+dy, x+dx {
-				field := yXToField(y, x)
+				field := YXToField(y, x)
 				pawn := board[field]
 
 				if pawn == opponent {
@@ -251,7 +251,7 @@ func (game *ReversiGame) OneHotBoard() [][][]float32 {
 		oneHotBoard[row] = make([][]float32, BOARD_SIZE)
 
 		for col := int8(0); col < BOARD_SIZE; col++ {
-			field := game.Board[yXToField(row, col)]
+			field := game.Board[YXToField(row, col)]
 
 			oneHotField := []float32{0, 1, 0}
 			if field == -1 {

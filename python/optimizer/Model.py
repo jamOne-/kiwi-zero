@@ -26,6 +26,15 @@ def add_ResidualLayer(inputs, filters):
     return x
 
 
+def add_ConvLayer(inputs, filters):
+    x = layers.Conv2D(
+        filters,
+        kernel_size=(3, 3),
+        padding='same',
+        activation='relu'
+    )(inputs)
+
+
 def add_ValueHead(model, filters):
     model = layers.Conv2D(
         1,
@@ -66,32 +75,34 @@ def get_model(
     filters=32,
     add_policy_head=False
 ):
+    CONV_FILTERS = [64, 64, 128, 128]
+
     inputs = layers.Input(shape=input_shape)
-    model = layers.Conv2D(
-        filters,
-        kernel_size=(3, 3),
-        padding='same',
-        # use_bias=False
-    )(inputs)
-    model = layers.BatchNormalization()(model)
-    model = layers.Activation('relu')(model)
 
-    for _ in range(res_layers_count):
-        model = add_ResidualLayer(model, filters)
+    model = inputs
+    for filters in range(CONV_FILTERS):
+        model = layers.Conv2D(
+            filters,
+            kernel_size=(3, 3),
+            padding='same',
+            activation='relu',
+        )(model)
 
-    outputs = []
 
-    value_out = add_ValueHead(model, filters)
-    outputs.append(value_out)
+    value_out = layers.Flatten()(model)
+    value_out = layers.Dense(128, activation='relu')(value_out)
+    # value_out = layers.Dropout(0.25)(value_out)
+    value_out = layers.Dense(1, activation='sigmoid', name='value_out')(value_out)
 
-    if add_policy_head:
-        policy_out = add_PolicyHead(model)
-        outputs.append(policy_out)
-
+    policy_out = layers.Flatten()(model)
+    policy_out = layers.Dense(128, activation='relu')(policy_out)
+    # policy_out = layers.Dropout(0.25)(policy_out)
+    policy_out = layers.Dense(65, activation='softmax', name='policy_out')(policy_out)
+    
     ret = models.Model(
         inputs=inputs,
-        outputs=outputs,
-        name='kiwi-zero'
+        outputs=[value_out, policy_out],
+        name='kiwi-zero',
     )
 
     return ret

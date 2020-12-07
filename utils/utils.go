@@ -9,6 +9,16 @@ import (
 	"gonum.org/v1/gonum/mat"
 )
 
+func SumFloats32(xs []float32) float32 {
+	var sum float32 = 0.0
+
+	for _, x := range xs {
+		sum += x
+	}
+
+	return sum
+}
+
 func Int8SliceToVecDense(xs []int8) *mat.VecDense {
 	n := len(xs)
 	vec := mat.NewVecDense(n, nil)

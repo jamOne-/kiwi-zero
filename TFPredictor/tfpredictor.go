@@ -35,3 +35,21 @@ func (predictor *TFPredictor) Predict(features predictor.Features) float32 {
 	prediction := results[0].Value().([][]float32)[0][0]
 	return prediction
 }
+
+func (predictor *TFPredictor) PredictPolicy(features predictor.Features) []float32 {
+	model := predictor.model
+	inputTensor, err := tf.NewTensor([1][][][]float32{features})
+
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+
+	policy := model.Exec([]tf.Output{
+		model.Op("StatefulPartitionedCall", 0), // TODO: 0 -- policy, 1 -- value
+	}, map[tf.Output]*tf.Tensor{
+		model.Op("serving_default_input_1", 0): inputTensor, // TODO
+	})
+
+	prediction := policy[0].Value().([][]float32)[0]
+	return prediction
+}

@@ -33,18 +33,22 @@ import (
 // 	"triangle": reversiValueFns.ConvertToReversiFn(reversiValueFns.ReversiToFeaturesTriangle),
 // 	"extended": reversiValueFns.ConvertToReversiFn(reversiValueFns.ReversiToFeaturesExtended)}
 
+var REVERSI_TO_FEATURES_FN_DICT = map[string]game.GameToFeaturesFn{
+	"board3":     reversiValueFns.ConvertReversiFnToGeneralFeatuersFn(reversiValueFns.ReversiToOneHotBoard3),
+	"boardmoves": reversiValueFns.ConvertReversiFnToGeneralFeatuersFn(reversiValueFns.ReversiToOneHotBoardMoves),
+}
+
 func main() {
 	rand.Seed(time.Now().UnixNano())
 	initConfig()
 
 	// INITIAL_WEIGHTS_PATH := viper.GetString("INITIAL_WEIGHTS_PATH")
+	GAME_TO_FEATURES_FN := viper.GetString("GAME_TO_FEATURES_FN")
 	MCTS_SIMULATIONS := viper.GetInt("MCTS_SIMULATIONS")
 	MINMAX_DEPTH := viper.GetInt("MINMAX_DEPTH")
-	// OLD_MINMAX_WEIGHTS_PATH := viper.GetString("OLD_MINMAX_WEIGHTS_PATH")
-	// OLD_MINMAX_WEIGHTS_MODE := viper.GetString("OLD_MINMAX_WEIGHTS_MODE")
 	OLD_MINMAX_MODEL_PATH := viper.GetString("OLD_MINMAX_MODEL_PATH")
+	OLD_MINMAX_MODEL_GAME_TO_FEATURES_FN := viper.GetString("OLD_MINMAX_MODEL_GAME_TO_FEATURES_FN")
 	RESULTS_DIR_NAME := viper.GetString("RESULTS_DIR_NAME")
-	// TRAINING_MODE := viper.GetString("TRAINING_MODE")
 
 	resultsDirPath := createResultsDir(RESULTS_DIR_NAME)
 	configPath := path.Join(resultsDirPath, "config.yaml")
@@ -56,22 +60,21 @@ func main() {
 	// }
 
 	initialValueFn := getInitialValueFn()
-	gameToFeaturesFn := reversiValueFns.ConvertReversiFnToGeneralFeatuersFn(reversiValueFns.ReversiToOneHotBoard)
+	gameToFeaturesFn := REVERSI_TO_FEATURES_FN_DICT[GAME_TO_FEATURES_FN]
 
 	playersToCompareWith := make([]*PlayerToCompare, 0)
 	mctsPlayer := monteCarloTreeSearchPlayer.NewMonteCarloTreeSearchPlayer(MCTS_SIMULATIONS)
 	playersToCompareWith = append(playersToCompareWith, &PlayerToCompare{fmt.Sprintf("MCTS (%d sims)", MCTS_SIMULATIONS), mctsPlayer})
 
-	// TODO: Add support for loading different gameToFeaturesFn!
 	if OLD_MINMAX_MODEL_PATH != "" {
-		oldMinMaxPlayer := loadMinMaxPlayer(gameToFeaturesFn, OLD_MINMAX_MODEL_PATH, MINMAX_DEPTH)
+		oldGameToFeaturesFn := REVERSI_TO_FEATURES_FN_DICT[OLD_MINMAX_MODEL_GAME_TO_FEATURES_FN]
+		oldMinMaxPlayer := loadMinMaxPlayer(oldGameToFeaturesFn, OLD_MINMAX_MODEL_PATH, MINMAX_DEPTH)
 		playersToCompareWith = append(playersToCompareWith, &PlayerToCompare{"OLD MinMax", oldMinMaxPlayer})
 	}
 
 	bestValueFnsChan := make(chan game.ValueFn)
 	gameResultsChan := make(chan *runner.GameResultsBatch)
 	newValueFnsChan := make(chan game.ValueFn)
-	// reversiToFeaturesFn := REVERSI_TO_FEATURES_BY_MODE[TRAINING_MODE]
 
 	go SelfPlayLoop(bestValueFnsChan, gameResultsChan, reversiGameFactory, initialValueFn)
 	go Optimizer(gameResultsChan, newValueFnsChan, gameToFeaturesFn, resultsDirPath)
