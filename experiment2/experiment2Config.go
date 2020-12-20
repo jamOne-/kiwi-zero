@@ -10,7 +10,7 @@ func initConfig() {
 	viper.SetDefault("EVALUATOR_GAMES", 40)
 	viper.SetDefault("EVALUATOR_GAMES_AT_ONCE", 4)
 	viper.SetDefault("GAMES_PER_ITERATION", 50)
-	viper.SetDefault("GAME_TO_FEATURES_FN", "board3")
+	viper.SetDefault("GAME_TO_FEATURES_FN", "boardmoves")
 	viper.SetDefault("INITIAL_WEIGHTS_PATH", "")
 	viper.SetDefault("MAX_BEST_PLAYERS_POOL_LENGTH", 20)
 	viper.SetDefault("MCTS_SIMULATIONS", 2000)
@@ -31,7 +31,7 @@ func initConfig() {
 	viper.SetDefault("OPTIMIZER_MAX_POSITIONS_FROM_BATCH", 10)
 	viper.SetDefault("OPTIMIZER_MAX_HISTORY_LENGTH", 25000)
 
-	viper.SetDefault("OPTIMIZER_FULLY_CONNECTED", true)
+	viper.SetDefault("OPTIMIZER_FULLY_CONNECTED", false)
 	viper.SetDefault("OPTIMIZER_FC_LAYERS_COUNT", 7)
 	viper.SetDefault("OPTIMIZER_FC_LAYER_UNITS", 128)
 	viper.SetDefault("OPTIMIZER_FC_DROPOUT", 0.25)

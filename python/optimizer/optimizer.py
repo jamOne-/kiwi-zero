@@ -40,7 +40,7 @@ def train_model(args, model, Xs, ys, policies):
     callbacks = [
         tf.keras.callbacks.EarlyStopping(
             patience=10,
-            monitor='val_value_out_loss'
+            monitor='val_loss'
         )
     ]
 
@@ -102,7 +102,7 @@ if __name__ == "__main__":
         "value_out": "binary_crossentropy",
         "policy_out": "categorical_crossentropy",
     }
-    loss_weights = {"value_out": 1.0, "policy_out": 0}
+    loss_weights = {"value_out": 1.0, "policy_out": 1.0}
 
     model.compile(
         optimizer=tf.keras.optimizers.Adam(args.learning_rate),
@@ -111,7 +111,7 @@ if __name__ == "__main__":
         metrics=['accuracy']
     )
 
-    iteration = 0
+    iteration = 1
     while True:
         Xs_shape = list(map(int, input().rstrip().split(" ")))
         Xs = read_features(Xs_shape)

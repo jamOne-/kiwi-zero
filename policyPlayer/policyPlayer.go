@@ -1,8 +1,6 @@
 package policyPlayer
 
 import (
-	"math/rand"
-
 	tfpredictor "github.com/jamOne-/kiwi-zero/TFPredictor"
 	"github.com/jamOne-/kiwi-zero/game"
 	"github.com/jamOne-/kiwi-zero/utils"
@@ -34,14 +32,7 @@ func (player *PolicyPlayer) SelectMove(game game.Game) game.Move {
 		movesValues[i] *= scaleFactor
 	}
 
-	// TODO: binary search possible here
-	x := rand.Float32()
-	moveIndex := 0
-	for x-movesValues[moveIndex] > 0 {
-		x -= movesValues[moveIndex]
-		moveIndex += 1
-	}
-
+	moveIndex := utils.RandomFromDistribution(movesValues)
 	return moves[moveIndex]
 }
 

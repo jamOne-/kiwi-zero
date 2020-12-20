@@ -7,7 +7,7 @@ import (
 	"github.com/jamOne-/kiwi-zero/game"
 )
 
-const INFINITY = 99999999.0
+const INFINITY = 10.0
 
 type MinMaxPlayer struct {
 	depth   int

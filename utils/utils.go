@@ -2,6 +2,7 @@ package utils
 
 import (
 	"math"
+	"math/rand"
 	"strconv"
 	"strings"
 	"time"
@@ -155,4 +156,16 @@ func FloatsToString(xs []float32) string {
 	}
 
 	return strings.Join(xs_string, " ")
+}
+
+func RandomFromDistribution(distribution []float32) int {
+	// TODO: binary search possible here
+	x := rand.Float32()
+	index := 0
+	for x-distribution[index] > 0 {
+		x -= distribution[index]
+		index += 1
+	}
+
+	return index
 }

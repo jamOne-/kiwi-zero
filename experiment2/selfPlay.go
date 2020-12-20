@@ -15,7 +15,7 @@ func SelfPlayLoop(
 	gameFactory runner.NewGameFactory,
 	initialValueFn game.ValueFn,
 ) {
-	EPSILON := viper.GetFloat64("EPSILON")
+	// EPSILON := viper.GetFloat64("EPSILON")
 	GAMES_PER_ITERATION := viper.GetInt("GAMES_PER_ITERATION")
 	MINMAX_DEPTH := viper.GetInt("MINMAX_DEPTH")
 	SELFPLAY_GAMES_AT_ONCE := viper.GetInt("SELFPLAY_GAMES_AT_ONCE")
@@ -25,13 +25,15 @@ func SelfPlayLoop(
 	}
 
 	selfPlay_i := 1
-	selfPlayPlayer := minMaxPlayer.NewEpsilonGreedyMinMaxPlayer(MINMAX_DEPTH, EPSILON, initialValueFn)
+	// selfPlayPlayer := minMaxPlayer.NewEpsilonGreedyMinMaxPlayer(MINMAX_DEPTH, EPSILON, initialValueFn)
+	selfPlayPlayer := minMaxPlayer.NewSoftMaxMinMaxPlayer(MINMAX_DEPTH, initialValueFn)
 
 	for {
 		select {
 		case valueFn := <-bestValueFns:
 			if valueFn != nil {
-				selfPlayPlayer = minMaxPlayer.NewEpsilonGreedyMinMaxPlayer(MINMAX_DEPTH, EPSILON, valueFn)
+				// selfPlayPlayer = minMaxPlayer.NewEpsilonGreedyMinMaxPlayer(MINMAX_DEPTH, EPSILON, valueFn)
+				selfPlayPlayer = minMaxPlayer.NewSoftMaxMinMaxPlayer(MINMAX_DEPTH, valueFn)
 			}
 
 			// default:

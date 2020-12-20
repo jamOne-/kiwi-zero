@@ -36,10 +36,11 @@ func (player *MonteCarloTreeSearchPlayer) SelectMove(game game.Game) game.Move {
 
 		selectedNode := selectNode(gameCopy, tree)
 		createdNode := selectedNode.expand(gameCopy)
-		updateNs(createdNode)
+		// updateNs(createdNode)
 
 		result := randomSampleFromState(gameCopy)
-		updateVs(result, createdNode)
+		// updateVs(result, createdNode)
+		updateNsAndVs(result, createdNode)
 	}
 
 	bestVisitCount, bestNodes := 0, make([]int, 0, 10)
@@ -68,7 +69,7 @@ func selectNode(game game.Game, node *Node) *Node {
 		return node
 	}
 
-	bestScore, bestNodes := -999999.0, make([]int, 0, 10)
+	bestScore, bestNodes := -999999.0, make([]int, 0)
 	C := 2.0
 
 	for i, child := range node.Nodes {
@@ -80,7 +81,7 @@ func selectNode(game game.Game, node *Node) *Node {
 
 		if score > bestScore {
 			bestScore = score
-			bestNodes = append(make([]int, 0, 10), i)
+			bestNodes = append(make([]int, 0), i)
 		} else if score == bestScore {
 			bestNodes = append(bestNodes, i)
 		}
@@ -101,6 +102,14 @@ func updateNs(node *Node) {
 
 func updateVs(result int8, node *Node) {
 	for node != nil {
+		node.V += int(node.currentPlayer * result)
+		node = node.parent
+	}
+}
+
+func updateNsAndVs(result int8, node *Node) {
+	for node != nil {
+		node.N += 1
 		node.V += int(node.currentPlayer * result)
 		node = node.parent
 	}

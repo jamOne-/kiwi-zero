@@ -7,8 +7,8 @@ import (
 	"time"
 
 	tfpredictor "github.com/jamOne-/kiwi-zero/TFPredictor"
-	"github.com/jamOne-/kiwi-zero/minMaxPlayer"
 	"github.com/jamOne-/kiwi-zero/policyPlayer"
+	"github.com/jamOne-/kiwi-zero/randomPlayer"
 	"github.com/jamOne-/kiwi-zero/reversiValueFns"
 
 	"github.com/jamOne-/kiwi-zero/game"
@@ -25,11 +25,13 @@ func main() {
 	// 7 layers trained with smaller pool and capped positions
 	// tfpredictor := tfpredictor.NewTFPredictor("../experiment2/results/2020-12-01-140644/models/123")
 	// conv first try
-	tfpredictor := tfpredictor.NewTFPredictor("../experiment2/results/2020-11-26-202747/models/350")
+	// tfpredictor := tfpredictor.NewTFPredictor("../experiment2/results/2020-11-26-202747/models/350")
+	// conv softmax minmax 3
+	tfpredictor := tfpredictor.NewTFPredictor("../experiment2/results/2020-12-07-222844/models/250")
 	gameToFeaturesFn := reversiValueFns.ConvertReversiFnToGeneralFeatuersFn(reversiValueFns.ReversiToOneHotBoardMoves)
 	gameToDistributionFn := policyPlayer.GameToDistributionFnFromTfPredictor(gameToFeaturesFn, tfpredictor)
 
-	valueFn := reversiValueFns.CreateMinMaxValueFn(gameToFeaturesFn, tfpredictor)
+	// valueFn := reversiValueFns.CreateMinMaxValueFn(gameToFeaturesFn, tfpredictor)
 
 	for gameNumber := 0; gameNumber < NUMBER_OF_GAMES; gameNumber += 1 {
 		g := reversi.NewReversiGame()
@@ -38,9 +40,9 @@ func main() {
 		player1 := policyPlayer.NewPolicyPlayer(gameToDistributionFn)
 		// player2 := minMaxPlayer.NewPredictorMinMaxPlayer(4)
 		// player2 := minMaxPlayer.NewMinMaxPlayer(7)
-		// player2 := randomPlayer.NewRandomPlayer()
+		player2 := randomPlayer.NewRandomPlayer()
 
-		player2 := minMaxPlayer.NewMinMaxPlayer(3, valueFn)
+		// player2 := minMaxPlayer.NewMinMaxPlayer(4, valueFn)
 
 		// g.DrawBoard()
 		// fmt.Println("")
