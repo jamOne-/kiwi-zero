@@ -162,10 +162,18 @@ func RandomFromDistribution(distribution []float32) int {
 	// TODO: binary search possible here
 	x := rand.Float32()
 	index := 0
-	for x-distribution[index] > 0 {
+	for x-distribution[index] > 0 && index < len(distribution)-1 {
 		x -= distribution[index]
 		index += 1
 	}
 
 	return index
+}
+
+func BoolToInt(b bool) int {
+	if b {
+		return 1
+	} else {
+		return 0
+	}
 }

@@ -1,8 +1,8 @@
 package policyPlayer
 
 import (
-	tfpredictor "github.com/jamOne-/kiwi-zero/TFPredictor"
 	"github.com/jamOne-/kiwi-zero/game"
+	"github.com/jamOne-/kiwi-zero/predictor"
 	"github.com/jamOne-/kiwi-zero/utils"
 )
 
@@ -36,12 +36,12 @@ func (player *PolicyPlayer) SelectMove(game game.Game) game.Move {
 	return moves[moveIndex]
 }
 
-func GameToDistributionFnFromTfPredictor(
+func GameToDistributionFnFromPredictor(
 	gameToFeaturesFn game.GameToFeaturesFn,
-	tfpredictor *tfpredictor.TFPredictor,
+	predictor predictor.Predictor,
 ) GameToDistributionFn {
 	return func(game game.Game) Distribution {
 		features := gameToFeaturesFn(game)
-		return tfpredictor.PredictPolicy(features)
+		return predictor.PredictPolicy(features)
 	}
 }

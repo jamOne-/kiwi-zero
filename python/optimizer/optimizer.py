@@ -16,7 +16,7 @@ parser.add_argument('--res_layers_count', default='1', type=int)
 parser.add_argument('--filters', default='32', type=int)
 parser.add_argument('--add_policy_head', default=False, type=bool)
 
-parser.add_argument('--fully_connected', default=True, type=bool)
+parser.add_argument('--fully_connected', default=0, type=int)
 parser.add_argument('--fc_dropout', default=0.5, type=float)
 parser.add_argument('--fc_layers_count', default=3, type=int)
 parser.add_argument('--fc_layer_units', default=128, type=int)
@@ -26,6 +26,7 @@ stdout = sys.stdout
 sys.stdout = open(args.logfile, 'w')
 sys.stderr = sys.stdout
 # os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
 
 import numpy as np
 import tensorflow as tf

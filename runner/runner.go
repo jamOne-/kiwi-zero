@@ -216,14 +216,16 @@ func ComparePlayerWithOthersAsync(
 		maxGamesPerPlayer = 1
 	}
 
+	gamesPerPlayer := numberOfGames / numberOfPlayers
+
 	gamesLeft := numberOfGames
 	playerWins := 0
 
-	for i, opponent := range players {
-		gamesToPlay := gamesLeft / (numberOfPlayers - i)
-		playerWins += ComparePlayersAsync(gameFactory, player, opponent, gamesToPlay, maxGamesPerPlayer)
+	for _, opponent := range players {
+		// gamesToPlay := gamesLeft / (numberOfPlayers - i)
+		playerWins += ComparePlayersAsync(gameFactory, player, opponent, gamesPerPlayer, maxGamesPerPlayer)
 
-		gamesLeft -= gamesToPlay
+		gamesLeft -= gamesPerPlayer
 	}
 
 	return playerWins

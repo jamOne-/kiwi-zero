@@ -3,21 +3,23 @@ package main
 import (
 	"fmt"
 
-	"github.com/jamOne-/kiwi-zero/game"
-	"github.com/jamOne-/kiwi-zero/minMaxPlayer"
+	"github.com/jamOne-/kiwi-zero/player"
+	"github.com/jamOne-/kiwi-zero/predictor"
+
 	"github.com/jamOne-/kiwi-zero/runner"
 	"github.com/spf13/viper"
 )
 
 func SelfPlayLoop(
-	bestValueFns chan game.ValueFn,
+	bestPredictors chan predictor.Predictor,
 	gameResults chan *runner.GameResultsBatch,
 	gameFactory runner.NewGameFactory,
-	initialValueFn game.ValueFn,
+	initialPredictor predictor.Predictor,
+	selfPlayFactory player.PlayerFactory,
 ) {
 	// EPSILON := viper.GetFloat64("EPSILON")
 	GAMES_PER_ITERATION := viper.GetInt("GAMES_PER_ITERATION")
-	MINMAX_DEPTH := viper.GetInt("MINMAX_DEPTH")
+	// MINMAX_DEPTH := viper.GetInt("MINMAX_DEPTH")
 	SELFPLAY_GAMES_AT_ONCE := viper.GetInt("SELFPLAY_GAMES_AT_ONCE")
 
 	if SELFPLAY_GAMES_AT_ONCE == 0 {
@@ -26,14 +28,16 @@ func SelfPlayLoop(
 
 	selfPlay_i := 1
 	// selfPlayPlayer := minMaxPlayer.NewEpsilonGreedyMinMaxPlayer(MINMAX_DEPTH, EPSILON, initialValueFn)
-	selfPlayPlayer := minMaxPlayer.NewSoftMaxMinMaxPlayer(MINMAX_DEPTH, initialValueFn)
+	// selfPlayPlayer := minMaxPlayer.NewSoftMaxMinMaxPlayer(MINMAX_DEPTH, initialValueFn)
+	selfPlayPlayer := selfPlayFactory(initialPredictor)
 
 	for {
 		select {
-		case valueFn := <-bestValueFns:
-			if valueFn != nil {
-				// selfPlayPlayer = minMaxPlayer.NewEpsilonGreedyMinMaxPlayer(MINMAX_DEPTH, EPSILON, valueFn)
-				selfPlayPlayer = minMaxPlayer.NewSoftMaxMinMaxPlayer(MINMAX_DEPTH, valueFn)
+		case predictor := <-bestPredictors:
+			if predictor != nil {
+				// selfPlayPlayer = minMaxPlayer.NewEpsilonGreedyMinMaxPlayer(MINMAX_DEPTH, EPSILON, predictor)
+				// selfPlayPlayer = minMaxPlayer.NewSoftMaxMinMaxPlayer(MINMAX_DEPTH, predictor)
+				selfPlayPlayer = selfPlayFactory(predictor)
 			}
 
 			// default:

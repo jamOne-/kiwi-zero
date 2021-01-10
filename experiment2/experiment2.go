@@ -9,6 +9,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jamOne-/kiwi-zero/randomPlayer"
+
+	"github.com/jamOne-/kiwi-zero/predictor"
+	"github.com/jamOne-/kiwi-zero/randomPredictor"
+
 	tfpredictor "github.com/jamOne-/kiwi-zero/TFPredictor"
 	"github.com/jamOne-/kiwi-zero/minMaxPlayer"
 	"github.com/jamOne-/kiwi-zero/player"
@@ -59,12 +64,14 @@ func main() {
 	// 	initialWeights = reversiValueFns.LoadWeightsFromFile(INITIAL_WEIGHTS_PATH)
 	// }
 
-	initialValueFn := getInitialValueFn()
+	// initialValueFn := getInitialValueFn()
+	initialPredictor := randomPredictor.NewRandomPredictor()
 	gameToFeaturesFn := REVERSI_TO_FEATURES_FN_DICT[GAME_TO_FEATURES_FN]
 
 	playersToCompareWith := make([]*PlayerToCompare, 0)
 	mctsPlayer := monteCarloTreeSearchPlayer.NewMonteCarloTreeSearchPlayer(MCTS_SIMULATIONS)
 	playersToCompareWith = append(playersToCompareWith, &PlayerToCompare{fmt.Sprintf("MCTS (%d sims)", MCTS_SIMULATIONS), mctsPlayer})
+	playersToCompareWith = append(playersToCompareWith, &PlayerToCompare{"Random", randomPlayer.NewRandomPlayer()})
 
 	if OLD_MINMAX_MODEL_PATH != "" {
 		oldGameToFeaturesFn := REVERSI_TO_FEATURES_FN_DICT[OLD_MINMAX_MODEL_GAME_TO_FEATURES_FN]
@@ -72,16 +79,27 @@ func main() {
 		playersToCompareWith = append(playersToCompareWith, &PlayerToCompare{"OLD MinMax", oldMinMaxPlayer})
 	}
 
-	bestValueFnsChan := make(chan game.ValueFn)
+	selfPlayPlayerFactory := getEpsilonGreedyMinMaxFactory(gameToFeaturesFn, MINMAX_DEPTH)
+	// selfPlayPlayerFactory := getMinMaxFactory(gameToFeaturesFn, MINMAX_DEPTH)
+	evaluatorPlayerFactory := getMinMaxFactory(gameToFeaturesFn, MINMAX_DEPTH)
+	// selfPlayPlayerFactory := getMCTSFactory(gameToFeaturesFn, 500, 20)
+	// evaluatorPlayerFactory := getMCTSFactory(gameToFeaturesFn, 500, 20)
+
+	// bestValueFnsChan := make(chan game.ValueFn)
 	gameResultsChan := make(chan *runner.GameResultsBatch)
-	newValueFnsChan := make(chan game.ValueFn)
+	// newValueFnsChan := make(chan game.ValueFn)
 
-	go SelfPlayLoop(bestValueFnsChan, gameResultsChan, reversiGameFactory, initialValueFn)
-	go Optimizer(gameResultsChan, newValueFnsChan, gameToFeaturesFn, resultsDirPath)
-	go Evaluator(newValueFnsChan, bestValueFnsChan, reversiGameFactory, initialValueFn, playersToCompareWith, resultsDirPath)
-	bestValueFnsChan <- initialValueFn
+	bestPredictorsChan := make(chan predictor.Predictor)
+	newPredictorsChan := make(chan predictor.Predictor)
 
-	// f, err := os.Create("cpu.prof")
+	// go SelfPlayLoop(bestValueFnsChan, gameResultsChan, reversiGameFactory, initialValueFn)
+	go SelfPlayLoop(bestPredictorsChan, gameResultsChan, reversiGameFactory, initialPredictor, selfPlayPlayerFactory)
+	go Optimizer(gameResultsChan, newPredictorsChan, gameToFeaturesFn, resultsDirPath)
+	go Evaluator(newPredictorsChan, bestPredictorsChan, reversiGameFactory, initialPredictor, evaluatorPlayerFactory, playersToCompareWith, resultsDirPath)
+	// bestValueFnsChan <- initialValueFn
+	bestPredictorsChan <- initialPredictor
+
+	// f, err := os.Create("cpu2021_tfgpu.prof")
 	// if err != nil {
 	// 	log.Fatal("could not create CPU profile: ", err)
 	// }
@@ -125,4 +143,35 @@ func loadMinMaxPlayer(gameToFeatures game.GameToFeaturesFn, path string, depth i
 	valueFn := reversiValueFns.CreateMinMaxValueFn(gameToFeatures, predictor)
 
 	return minMaxPlayer.NewMinMaxPlayer(depth, valueFn)
+}
+
+func getMinMaxFactory(gameToFeatures game.GameToFeaturesFn, depth int) player.PlayerFactory {
+	return func(predictor predictor.Predictor) player.Player {
+		valueFn := reversiValueFns.CreateMinMaxValueFn(gameToFeatures, predictor)
+		return minMaxPlayer.NewMinMaxPlayer(depth, valueFn)
+	}
+}
+
+func getSoftmaxMinMaxFactory(gameToFeatures game.GameToFeaturesFn, depth int) player.PlayerFactory {
+	return func(predictor predictor.Predictor) player.Player {
+		valueFn := reversiValueFns.CreateMinMaxValueFn(gameToFeatures, predictor)
+		return minMaxPlayer.NewSoftMaxMinMaxPlayer(depth, valueFn)
+	}
+}
+
+func getEpsilonGreedyMinMaxFactory(gameToFeatures game.GameToFeaturesFn, depth int) player.PlayerFactory {
+	return func(predictor predictor.Predictor) player.Player {
+		valueFn := reversiValueFns.CreateMinMaxValueFn(gameToFeatures, predictor)
+		return minMaxPlayer.NewEpsilonGreedyMinMaxPlayer(depth, viper.GetFloat64("EPSILON"), valueFn)
+	}
+}
+
+func getMCTSFactory(gameToFeatures game.GameToFeaturesFn, maxSimulations int, rolloutDepth int) player.PlayerFactory {
+	return func(predictor predictor.Predictor) player.Player {
+		valueFn := reversiValueFns.CreateMinMaxValueFn(gameToFeatures, predictor)
+		// distributionFn := policyPlayer.GameToDistributionFnFromPredictor(gameToFeatures, predictor)
+		// policyPlayer := policyPlayer.NewPolicyPlayer(distributionFn)
+
+		return monteCarloTreeSearchPlayer.NewGeneralMCTSPlayer(maxSimulations, rolloutDepth, randomPlayer.NewRandomPlayer(), valueFn)
+	}
 }

@@ -81,7 +81,7 @@ func ReversiToOneHotBoardMoves(game *reversi.ReversiGame) game.Features {
 func CreateMinMaxValueFn(gameToFeaturesFn game.GameToFeaturesFn, predictor predictor.Predictor) game.ValueFn {
 	return func(g game.Game) float64 {
 		features := gameToFeaturesFn(g)
-		prediction := predictor.Predict(features)
+		prediction := predictor.PredictValue(features)
 
 		return float64(prediction)*2.0 - 1.0
 	}

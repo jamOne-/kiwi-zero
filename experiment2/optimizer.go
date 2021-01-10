@@ -11,12 +11,13 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/jamOne-/kiwi-zero/predictor"
+
 	"github.com/spf13/viper"
 
 	tfpredictor "github.com/jamOne-/kiwi-zero/TFPredictor"
 	"github.com/jamOne-/kiwi-zero/game"
 	"github.com/jamOne-/kiwi-zero/reversi"
-	"github.com/jamOne-/kiwi-zero/reversiValueFns"
 	"github.com/jamOne-/kiwi-zero/runner"
 	"github.com/jamOne-/kiwi-zero/utils"
 )
@@ -29,7 +30,7 @@ type trainingParams struct {
 
 func Optimizer(
 	gameResultsChan chan *runner.GameResultsBatch,
-	valueFnsChan chan game.ValueFn,
+	predictorsChan chan predictor.Predictor,
 	gameToFeaturesFn game.GameToFeaturesFn,
 	resultsDirPath string,
 ) {
@@ -54,7 +55,7 @@ func Optimizer(
 		"--learning_rate", fmt.Sprintf("%f", viper.GetFloat64("OPTIMIZER_LEARNING_RATE")),
 		"--epochs", strconv.Itoa(viper.GetInt("OPTIMIZER_MAX_EPOCHS")),
 		"--batch_size", strconv.Itoa(viper.GetInt("OPTIMIZER_BATCH_SIZE")),
-		"--fully_connected", strconv.FormatBool(viper.GetBool("OPTIMIZER_FULLY_CONNECTED")),
+		"--fully_connected", strconv.Itoa(utils.BoolToInt(viper.GetBool("OPTIMIZER_FULLY_CONNECTED"))),
 		"--fc_layers_count", strconv.Itoa(viper.GetInt("OPTIMIZER_FC_LAYERS_COUNT")),
 		"--fc_layer_units", strconv.Itoa(viper.GetInt("OPTIMIZER_FC_LAYER_UNITS")),
 		"--fc_dropout", fmt.Sprintf("%f", viper.GetFloat64("OPTIMIZER_FC_DROPOUT")),
@@ -68,7 +69,7 @@ func Optimizer(
 	trainingChan := make(chan *trainingParams)
 	newModelPathChan := make(chan string)
 	go trainer(trainingChan, optimizerIn, optimizerOut, newModelPathChan)
-	go valueFnsCreator(newModelPathChan, valueFnsChan, gameToFeaturesFn)
+	go predictorsCreator(newModelPathChan, predictorsChan, gameToFeaturesFn)
 
 	pythonOptimizerCmd.Start()
 
@@ -296,9 +297,9 @@ func trainer(
 	}
 }
 
-func valueFnsCreator(
+func predictorsCreator(
 	modelPathChan chan string,
-	valueFns chan game.ValueFn,
+	predictorsChan chan predictor.Predictor,
 	gameToFeatures game.GameToFeaturesFn,
 ) {
 	for path := range modelPathChan {
@@ -309,9 +310,10 @@ func valueFnsCreator(
 		// fmt.Printf("Optimizer: saved model path=%s", path)
 
 		predictor := tfpredictor.NewTFPredictor(path)
-		valueFn := reversiValueFns.CreateMinMaxValueFn(gameToFeatures, predictor)
+		// valueFn := reversiValueFns.CreateMinMaxValueFn(gameToFeatures, predictor)
 
-		valueFns <- valueFn
+		predictorsChan <- predictor
+		// valueFns <- valueFn
 		// select {
 		// case valueFns <- valueFn:
 		// 	// try to send

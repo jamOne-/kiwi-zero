@@ -10,15 +10,17 @@ import (
 
 type TFPredictor struct {
 	model *tg.Model
+	path  string
 }
 
 func NewTFPredictor(path string) *TFPredictor {
-	model := tg.LoadModel(path, []string{"serve"}, nil)
+	options := &tf.SessionOptions{Target: "", Config: []byte("2\x02 \x01")} // gpu_options.allow_growth = True
+	model := tg.LoadModel(path, []string{"serve"}, options)
 
-	return &TFPredictor{model}
+	return &TFPredictor{model, path}
 }
 
-func (predictor *TFPredictor) Predict(features predictor.Features) float32 {
+func (predictor *TFPredictor) PredictValue(features predictor.Features) float32 {
 	model := predictor.model
 	inputTensor, err := tf.NewTensor([1][][][]float32{features})
 

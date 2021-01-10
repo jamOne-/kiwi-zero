@@ -75,12 +75,13 @@ def get_model(
     filters=32,
     add_policy_head=False
 ):
-    CONV_FILTERS = [64, 64, 128, 128]
+    # CONV_FILTERS = [64, 64, 128, 128]
+    CONV_FILTERS = [64, 64]
 
     inputs = layers.Input(shape=input_shape)
 
     model = inputs
-    for filters in range(CONV_FILTERS):
+    for filters in CONV_FILTERS:
         model = layers.Conv2D(
             filters,
             kernel_size=(3, 3),

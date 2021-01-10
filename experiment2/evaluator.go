@@ -8,9 +8,8 @@ import (
 
 	"github.com/spf13/viper"
 
-	"github.com/jamOne-/kiwi-zero/game"
-	"github.com/jamOne-/kiwi-zero/minMaxPlayer"
 	"github.com/jamOne-/kiwi-zero/player"
+	"github.com/jamOne-/kiwi-zero/predictor"
 	"github.com/jamOne-/kiwi-zero/runner"
 )
 
@@ -20,10 +19,11 @@ type PlayerToCompare struct {
 }
 
 func Evaluator(
-	newValueFns chan game.ValueFn,
-	bestValueFns chan game.ValueFn,
+	newPredictors chan predictor.Predictor,
+	bestPredictors chan predictor.Predictor,
 	gameFactory runner.NewGameFactory,
-	initialValueFn game.ValueFn,
+	initialPredictor predictor.Predictor,
+	evaluatorPlayerFactory player.PlayerFactory,
 	playersToCompareWith []*PlayerToCompare,
 	resultsDirPath string,
 ) {
@@ -31,19 +31,21 @@ func Evaluator(
 	EVALUATOR_GAMES := viper.GetInt("EVALUATOR_GAMES")
 	EVALUATOR_GAMES_AT_ONCE := viper.GetInt("EVALUATOR_GAMES_AT_ONCE")
 	MAX_BEST_PLAYERS_POOL_LENGTH := viper.GetInt("MAX_BEST_PLAYERS_POOL_LENGTH")
-	MINMAX_DEPTH := viper.GetInt("MINMAX_DEPTH")
+	// MINMAX_DEPTH := viper.GetInt("MINMAX_DEPTH")
 
-	bestPlayer := minMaxPlayer.NewMinMaxPlayer(MINMAX_DEPTH, initialValueFn)
+	// bestPlayer := minMaxPlayer.NewMinMaxPlayer(MINMAX_DEPTH, initialValueFn)
+	bestPlayer := evaluatorPlayerFactory(initialPredictor)
 	bestPlayersPool := []player.Player{bestPlayer}
 
 	evaluator_i := 1
 
-	for newValueFn := range newValueFns {
+	for newPredictor := range newPredictors {
 		// if newModelPath == initialWeights {
 		// 	continue
 		// }
 
-		newPlayer := minMaxPlayer.NewMinMaxPlayer(MINMAX_DEPTH, newValueFn)
+		// newPlayer := minMaxPlayer.NewMinMaxPlayer(MINMAX_DEPTH, newPredictor)
+		newPlayer := evaluatorPlayerFactory(newPredictor)
 		// newPlayerWins := runner.ComparePlayersAsync(gameFactory, newPlayer, bestPlayer, EVALUATOR_GAMES, EVALUATOR_GAMES_AT_ONCE)
 		newPlayerWins := runner.ComparePlayerWithOthersAsync(gameFactory, newPlayer, bestPlayersPool, EVALUATOR_GAMES, EVALUATOR_GAMES_AT_ONCE)
 
@@ -59,9 +61,9 @@ func Evaluator(
 				bestPlayersPool = bestPlayersPool[len(bestPlayersPool)-MAX_BEST_PLAYERS_POOL_LENGTH:]
 			}
 
-			bestValueFns <- newValueFn
+			bestPredictors <- newPredictor
 		} else {
-			bestValueFns <- nil
+			bestPredictors <- nil
 		}
 
 		if CHECKPOINT_EVERY > 0 && evaluator_i%CHECKPOINT_EVERY == 0 {
@@ -122,7 +124,7 @@ func evaluatorCheckpoint(
 				resultsPath,
 				gameFactory,
 				bestPlayer,
-				fmt.Sprintf("MinMax (version=%d)", bestPlayer_i),
+				fmt.Sprintf("Reinforced (version=%d)", bestPlayer_i),
 				playerToCompareWith.player,
 				playerToCompareWith.name,
 				COMPARE_AT_CHECKPOINTS_GAMES,
