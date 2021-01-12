@@ -34,7 +34,7 @@ func (player *MonteCarloTreeSearchPlayer) SelectMove(game game.Game) game.Move {
 	for simulation := 0; simulation < player.maxSimulations; simulation += 1 {
 		gameCopy := game.Copy()
 
-		selectedNode := selectNode(gameCopy, tree)
+		selectedNode, _ := selectNode(gameCopy, tree, 0)
 		createdNode := selectedNode.expand(gameCopy)
 		// updateNs(createdNode)
 
@@ -64,9 +64,9 @@ func newNode(game game.Game, parent *Node) *Node {
 	return &Node{parent, 0, 0, game.GetCurrentPlayerColor(), 0, moves, nodes}
 }
 
-func selectNode(game game.Game, node *Node) *Node {
+func selectNode(game game.Game, node *Node, stepsAccumulator int) (*Node, int) {
 	if node.isLeaf() {
-		return node
+		return node, stepsAccumulator
 	}
 
 	bestScore, bestNodes := -999999.0, make([]int, 0)
@@ -90,7 +90,7 @@ func selectNode(game game.Game, node *Node) *Node {
 	selectedIndex := bestNodes[rand.Intn(len(bestNodes))]
 	game.MakeMove(node.moves[selectedIndex])
 
-	return selectNode(game, node.Nodes[selectedIndex])
+	return selectNode(game, node.Nodes[selectedIndex], stepsAccumulator+1)
 }
 
 func updateNs(node *Node) {

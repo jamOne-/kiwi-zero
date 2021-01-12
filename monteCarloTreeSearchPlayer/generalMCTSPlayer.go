@@ -27,14 +27,15 @@ func (player *GeneralMCTSPlayer) SelectMove(game game.Game) game.Move {
 	tree := newNode(game, nil)
 
 	for simulation := 0; simulation < player.maxSimulations; simulation += 1 {
-		// TODO: know number of moves made and run some undos
-		gameCopy := game.Copy()
+		selectedNode, steps := selectNode(game, tree, 0)
+		createdNode := selectedNode.expand(game)
 
-		selectedNode := selectNode(gameCopy, tree)
-		createdNode := selectedNode.expand(gameCopy)
-
-		result := rollout(player.rolloutDepth, player.rolloutPlayer, player.valueFn, gameCopy)
+		result := rollout(player.rolloutDepth, player.rolloutPlayer, player.valueFn, game)
 		updateNsAndVs(result, createdNode)
+
+		for i := 0; i < steps+1; i += 1 {
+			game.UndoLastMove()
+		}
 	}
 
 	bestVisitCount, bestNodes := 0, make([]int, 0)
@@ -53,19 +54,25 @@ func (player *GeneralMCTSPlayer) SelectMove(game game.Game) game.Move {
 
 func rollout(maxDepth int, player player.Player, valueFn game.ValueFn, game game.Game) int8 {
 	finished, winner := false, int8(0)
+	steps := 0
 
 	for depth := 0; depth < maxDepth && !finished; depth += 1 {
 		move := player.SelectMove(game)
 		finished, winner = game.MakeMove(move)
+		steps += 1
+	}
+
+	for i := 0; i < steps; i += 1 {
+		game.UndoLastMove()
 	}
 
 	if finished {
 		return winner
 	}
 
-	probability := valueFn(game)
+	value := valueFn(game) // returns value from [-1;1]
 
-	if probability > 0.5 {
+	if value > 0 {
 		return 1
 	} else {
 		return -1

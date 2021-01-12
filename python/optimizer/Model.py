@@ -76,7 +76,7 @@ def get_model(
     add_policy_head=False
 ):
     # CONV_FILTERS = [64, 64, 128, 128]
-    CONV_FILTERS = [64, 64]
+    CONV_FILTERS = [32, 32, 64, 64]
 
     inputs = layers.Input(shape=input_shape)
 

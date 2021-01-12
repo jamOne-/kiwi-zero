@@ -31,8 +31,8 @@ func initConfig() {
 	viper.SetDefault("OPTIMIZER_MAX_POSITIONS_FROM_BATCH", 10)
 	viper.SetDefault("OPTIMIZER_MAX_HISTORY_LENGTH", 25000)
 
-	viper.SetDefault("OPTIMIZER_FULLY_CONNECTED", true)
-	viper.SetDefault("OPTIMIZER_FC_LAYERS_COUNT", 5)
-	viper.SetDefault("OPTIMIZER_FC_LAYER_UNITS", 64)
+	viper.SetDefault("OPTIMIZER_FULLY_CONNECTED", false)
+	viper.SetDefault("OPTIMIZER_FC_LAYERS_COUNT", 7)
+	viper.SetDefault("OPTIMIZER_FC_LAYER_UNITS", 128)
 	viper.SetDefault("OPTIMIZER_FC_DROPOUT", 0.25)
 }

@@ -39,7 +39,7 @@ func (player *ThreadedMonteCarloTreeSearchPlayer) SelectMoveWithRoot(game game.G
 	for simulation := 0; simulation < player.maxSimulations; simulation += 1 {
 		gameCopy := game.Copy()
 
-		selectedNode := selectNode(gameCopy, tree)
+		selectedNode, _ := selectNode(gameCopy, tree, 0)
 		createdNode := selectedNode.expand(gameCopy)
 		updateNs(createdNode)
 

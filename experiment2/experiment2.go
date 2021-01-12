@@ -79,11 +79,11 @@ func main() {
 		playersToCompareWith = append(playersToCompareWith, &PlayerToCompare{"OLD MinMax", oldMinMaxPlayer})
 	}
 
-	selfPlayPlayerFactory := getEpsilonGreedyMinMaxFactory(gameToFeaturesFn, MINMAX_DEPTH)
+	// selfPlayPlayerFactory := getEpsilonGreedyMinMaxFactory(gameToFeaturesFn, MINMAX_DEPTH)
 	// selfPlayPlayerFactory := getMinMaxFactory(gameToFeaturesFn, MINMAX_DEPTH)
-	evaluatorPlayerFactory := getMinMaxFactory(gameToFeaturesFn, MINMAX_DEPTH)
-	// selfPlayPlayerFactory := getMCTSFactory(gameToFeaturesFn, 500, 20)
-	// evaluatorPlayerFactory := getMCTSFactory(gameToFeaturesFn, 500, 20)
+	// evaluatorPlayerFactory := getMinMaxFactory(gameToFeaturesFn, MINMAX_DEPTH)
+	selfPlayPlayerFactory := getMCTSFactory(gameToFeaturesFn, 500, 20)
+	evaluatorPlayerFactory := getMCTSFactory(gameToFeaturesFn, 500, 20)
 
 	// bestValueFnsChan := make(chan game.ValueFn)
 	gameResultsChan := make(chan *runner.GameResultsBatch)
