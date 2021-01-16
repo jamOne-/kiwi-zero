@@ -78,6 +78,54 @@ func ReversiToOneHotBoardMoves(game *reversi.ReversiGame) game.Features {
 	return features
 }
 
+func ReversiToOneHotBoardPaddedMoves(game *reversi.ReversiGame) game.Features {
+	emptyOneHot := []float32{1, 0, 0, 0, 0}
+	borderOneHot := []float32{0, 1, 0, 0, 0}
+	whiteOneHot := []float32{0, 0, 1, 0, 0}
+	blackOneHot := []float32{0, 0, 0, 1, 0}
+
+	boardSize := int8(reversi.BOARD_SIZE + 2)
+	features := make([][][]float32, boardSize)
+	features[0] = make([][]float32, boardSize)
+	features[boardSize-1] = make([][]float32, boardSize)
+
+	for col := int8(0); col < boardSize; col++ {
+		features[0][col] = borderOneHot
+		features[boardSize-1][col] = borderOneHot
+	}
+
+	for row := int8(0); row < reversi.BOARD_SIZE; row++ {
+		features[row+1] = make([][]float32, boardSize)
+		features[row+1][0] = borderOneHot
+		features[row+1][boardSize-1] = borderOneHot
+
+		for col := int8(0); col < reversi.BOARD_SIZE; col++ {
+			field := game.Board[reversi.YXToField(row, col)]
+
+			oneHotField := emptyOneHot
+			if field == reversi.WHITE {
+				oneHotField = whiteOneHot
+			} else if field == reversi.BLACK {
+				oneHotField = blackOneHot
+			}
+
+			features[row+1][col+1] = oneHotField
+		}
+	}
+
+	possibleMoves := game.GetPossibleMoves()
+	for _, move := range possibleMoves {
+		if move == -1 {
+			continue
+		}
+
+		y, x := reversi.GetYX(move)
+		features[y+1][x+1][4] = 1
+	}
+
+	return features
+}
+
 func CreateMinMaxValueFn(gameToFeaturesFn game.GameToFeaturesFn, predictor predictor.Predictor) game.ValueFn {
 	return func(g game.Game) float64 {
 		features := gameToFeaturesFn(g)
