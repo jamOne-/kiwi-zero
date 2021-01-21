@@ -24,7 +24,6 @@ func initConfig() {
 
 	viper.SetDefault("OPTIMIZER_BATCH_SIZE", 16)
 	viper.SetDefault("OPTIMIZER_FLIP_POSITIONS_PROB", 0.5)
-	viper.SetDefault("OPTIMIZER_INPUT_SHAPE", "(8,8,5)")
 	viper.SetDefault("OPTIMIZER_LEARNING_RATE", 1e-4)
 	viper.SetDefault("OPTIMIZER_MAX_EPOCHS", 200)
 	viper.SetDefault("OPTIMIZER_TRAINING_SIZE", 256)
