@@ -12,14 +12,13 @@ parser.add_argument('--epochs', default='1000', type=int)
 parser.add_argument('--batch_size', default='16', type=int)
 parser.add_argument('--input_shape', default="(8, 8, 3)", type=str)
 
-parser.add_argument('--res_layers_count', default='1', type=int)
-parser.add_argument('--filters', default='32', type=int)
-parser.add_argument('--add_policy_head', default=False, type=bool)
-
 parser.add_argument('--fully_connected', default=0, type=int)
 parser.add_argument('--fc_dropout', default=0.5, type=float)
 parser.add_argument('--fc_layers_count', default=3, type=int)
 parser.add_argument('--fc_layer_units', default=128, type=int)
+
+parser.add_argument('--conv_filters', default="[32,32,64,64]", type=str)
+
 args = parser.parse_args()
 
 stdout = sys.stdout
@@ -92,11 +91,11 @@ if __name__ == "__main__":
             dropout_rate=args.fc_dropout,
         )
     else:
+        conv_filters = eval(args.conv_filters)
+
         model = Model.get_model(
             input_shape=input_shape,
-            res_layers_count=args.res_layers_count,
-            filters=args.filters,
-            add_policy_head=args.add_policy_head,
+            conv_filters=conv_filters,
         )
 
     loss_dict = {

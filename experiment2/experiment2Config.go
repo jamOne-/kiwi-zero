@@ -34,4 +34,6 @@ func initConfig() {
 	viper.SetDefault("OPTIMIZER_FC_LAYERS_COUNT", 7)
 	viper.SetDefault("OPTIMIZER_FC_LAYER_UNITS", 128)
 	viper.SetDefault("OPTIMIZER_FC_DROPOUT", 0.25)
+
+	viper.SetDefault("OPTIMIZER_CONV_FILTERS", "[32,32,64,64]")
 }

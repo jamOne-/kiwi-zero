@@ -45,8 +45,6 @@ func Optimizer(
 	modelsDirPath := filepath.Join(resultsDirPath, "models")
 	os.Mkdir(modelsDirPath, os.ModePerm)
 
-	inputShape := reversiValueFns.FEATURES_FN_TO_SHAPE_DICT[viper.GetString("GAME_TO_FEATURES_FN")]
-
 	gameFeatures := make([]game.Features, 0)
 	gameWinners := make([]float64, 0)
 	gameMoves := make([]game.Move, 0)
@@ -54,7 +52,7 @@ func Optimizer(
 	pythonOptimizerCmd := exec.Command(
 		"python3", "../python/optimizer/optimizer.py",
 		"--models_directory", modelsDirPath,
-		"--input_shape", inputShape,
+		"--input_shape", reversiValueFns.FEATURES_FN_TO_SHAPE_DICT[viper.GetString("GAME_TO_FEATURES_FN")],
 		"--learning_rate", fmt.Sprintf("%f", viper.GetFloat64("OPTIMIZER_LEARNING_RATE")),
 		"--epochs", strconv.Itoa(viper.GetInt("OPTIMIZER_MAX_EPOCHS")),
 		"--batch_size", strconv.Itoa(viper.GetInt("OPTIMIZER_BATCH_SIZE")),
@@ -62,6 +60,7 @@ func Optimizer(
 		"--fc_layers_count", strconv.Itoa(viper.GetInt("OPTIMIZER_FC_LAYERS_COUNT")),
 		"--fc_layer_units", strconv.Itoa(viper.GetInt("OPTIMIZER_FC_LAYER_UNITS")),
 		"--fc_dropout", fmt.Sprintf("%f", viper.GetFloat64("OPTIMIZER_FC_DROPOUT")),
+		"--conv_filters", viper.GetString("OPTIMIZER_CONV_FILTERS"),
 	)
 
 	fmt.Println("Args: " + strings.Join(pythonOptimizerCmd.Args, " "))

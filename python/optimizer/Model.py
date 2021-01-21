@@ -70,18 +70,13 @@ def add_PolicyHead(model):
 
 
 def get_model(
-    input_shape=(8, 8, 2),
-    res_layers_count=1,
-    filters=32,
-    add_policy_head=False
+    input_shape=(8, 8, 3),
+    conv_filters=[32, 32, 64, 64],
 ):
-    # CONV_FILTERS = [64, 64, 128, 128]
-    CONV_FILTERS = [32, 32, 64, 64]
-
     inputs = layers.Input(shape=input_shape)
 
     model = inputs
-    for filters in CONV_FILTERS:
+    for filters in conv_filters:
         model = layers.Conv2D(
             filters,
             kernel_size=(3, 3),
