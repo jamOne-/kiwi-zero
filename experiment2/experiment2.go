@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jamOne-/kiwi-zero/policyPlayer"
 	"github.com/jamOne-/kiwi-zero/randomPlayer"
 
 	"github.com/jamOne-/kiwi-zero/predictor"
@@ -28,27 +29,45 @@ import (
 	"github.com/spf13/viper"
 )
 
-// var INITIAL_WEIGHTS_BY_MODE = map[string](func() *mat.VecDense){
-// 	"normal":   reversiValueFns.GetInitialWeights,
-// 	"triangle": reversiValueFns.GetTriangleInitialWeights,
-// 	"extended": reversiValueFns.GetExtendedInitialWeights}
-
-// var REVERSI_TO_FEATURES_BY_MODE = map[string]game.GameToFeaturesFn{
-// 	"normal":   reversiValueFns.ConvertToReversiFn(reversiValueFns.ReversiToFeatures),
-// 	"triangle": reversiValueFns.ConvertToReversiFn(reversiValueFns.ReversiToFeaturesTriangle),
-// 	"extended": reversiValueFns.ConvertToReversiFn(reversiValueFns.ReversiToFeaturesExtended)}
-
 var REVERSI_TO_FEATURES_FN_DICT = map[string]game.GameToFeaturesFn{
 	"board3":      reversiValueFns.ConvertReversiFnToGeneralFeatuersFn(reversiValueFns.ReversiToOneHotBoard3),
 	"boardmoves":  reversiValueFns.ConvertReversiFnToGeneralFeatuersFn(reversiValueFns.ReversiToOneHotBoardMoves),
 	"paddedmoves": reversiValueFns.ConvertReversiFnToGeneralFeatuersFn(reversiValueFns.ReversiToOneHotBoardPaddedMoves),
 }
 
+func getPlayerFactory(
+	gameToFeaturesFn game.GameToFeaturesFn,
+	selfPlay bool,
+	playerType string,
+) player.PlayerFactory {
+	prefix := "EVALUATOR_"
+	if selfPlay {
+		prefix = "SELFPLAY_"
+	}
+
+	if playerType == "minmax" {
+		depth := viper.GetInt(prefix + "MINMAX_DEPTH")
+		return getMinMaxFactory(gameToFeaturesFn, depth)
+	} else if playerType == "minmax-e" {
+		depth := viper.GetInt(prefix + "MINMAX_DEPTH")
+		return getEpsilonGreedyMinMaxFactory(gameToFeaturesFn, depth)
+	} else if playerType == "minmax-sm" {
+		depth := viper.GetInt(prefix + "MINMAX_DEPTH")
+		return getSoftmaxMinMaxFactory(gameToFeaturesFn, depth)
+	} else if playerType == "mcts-pred" {
+		simulations := viper.GetInt(prefix + "MCTS_SIMULATIONS")
+		rolloutDepth := viper.GetInt(prefix + "MCTS_ROLLOUT_DEPTH")
+		policyRolloutPlayer := viper.GetBool(prefix + "MCTS_POLICY_ROLLOUT_PLAYER")
+		return getMCTSFactory(gameToFeaturesFn, simulations, rolloutDepth, policyRolloutPlayer)
+	}
+
+	return nil
+}
+
 func main() {
 	rand.Seed(time.Now().UnixNano())
 	initConfig()
 
-	// INITIAL_WEIGHTS_PATH := viper.GetString("INITIAL_WEIGHTS_PATH")
 	GAME_TO_FEATURES_FN := viper.GetString("GAME_TO_FEATURES_FN")
 	MCTS_SIMULATIONS := viper.GetInt("MCTS_SIMULATIONS")
 	MINMAX_DEPTH := viper.GetInt("MINMAX_DEPTH")
@@ -60,12 +79,6 @@ func main() {
 	configPath := path.Join(resultsDirPath, "config.yaml")
 	viper.WriteConfigAs(configPath)
 
-	// initialWeights := INITIAL_WEIGHTS_BY_MODE[TRAINING_MODE]()
-	// if INITIAL_WEIGHTS_PATH != "" {
-	// 	initialWeights = reversiValueFns.LoadWeightsFromFile(INITIAL_WEIGHTS_PATH)
-	// }
-
-	// initialValueFn := getInitialValueFn()
 	initialPredictor := randomPredictor.NewRandomPredictor()
 	gameToFeaturesFn := REVERSI_TO_FEATURES_FN_DICT[GAME_TO_FEATURES_FN]
 
@@ -80,20 +93,13 @@ func main() {
 		playersToCompareWith = append(playersToCompareWith, &PlayerToCompare{"OLD MinMax", oldMinMaxPlayer})
 	}
 
-	// selfPlayPlayerFactory := getEpsilonGreedyMinMaxFactory(gameToFeaturesFn, MINMAX_DEPTH)
-	// selfPlayPlayerFactory := getMinMaxFactory(gameToFeaturesFn, MINMAX_DEPTH)
-	// evaluatorPlayerFactory := getMinMaxFactory(gameToFeaturesFn, MINMAX_DEPTH)
-	selfPlayPlayerFactory := getMCTSFactory(gameToFeaturesFn, 500, 20)
-	evaluatorPlayerFactory := getMCTSFactory(gameToFeaturesFn, 500, 20)
+	selfPlayPlayerFactory := getPlayerFactory(gameToFeaturesFn, true, viper.GetString("SELFPLAY_PLAYER_TYPE"))
+	evaluatorPlayerFactory := getPlayerFactory(gameToFeaturesFn, false, viper.GetString("EVALUATOR_PLAYER_TYPE"))
 
-	// bestValueFnsChan := make(chan game.ValueFn)
 	gameResultsChan := make(chan *runner.GameResultsBatch)
-	// newValueFnsChan := make(chan game.ValueFn)
-
 	bestPredictorsChan := make(chan predictor.Predictor)
 	newPredictorsChan := make(chan predictor.Predictor)
 
-	// go SelfPlayLoop(bestValueFnsChan, gameResultsChan, reversiGameFactory, initialValueFn)
 	go SelfPlayLoop(bestPredictorsChan, gameResultsChan, reversiGameFactory, initialPredictor, selfPlayPlayerFactory)
 	go Optimizer(gameResultsChan, newPredictorsChan, gameToFeaturesFn, resultsDirPath)
 	go Evaluator(newPredictorsChan, bestPredictorsChan, reversiGameFactory, initialPredictor, evaluatorPlayerFactory, playersToCompareWith, resultsDirPath)
@@ -167,12 +173,16 @@ func getEpsilonGreedyMinMaxFactory(gameToFeatures game.GameToFeaturesFn, depth i
 	}
 }
 
-func getMCTSFactory(gameToFeatures game.GameToFeaturesFn, maxSimulations int, rolloutDepth int) player.PlayerFactory {
+func getMCTSFactory(gameToFeatures game.GameToFeaturesFn, maxSimulations int, rolloutDepth int, policyRolloutPlayer bool) player.PlayerFactory {
 	return func(predictor predictor.Predictor) player.Player {
 		valueFn := reversiValueFns.CreateMinMaxValueFn(gameToFeatures, predictor)
-		// distributionFn := policyPlayer.GameToDistributionFnFromPredictor(gameToFeatures, predictor)
-		// policyPlayer := policyPlayer.NewPolicyPlayer(distributionFn)
 
-		return monteCarloTreeSearchPlayer.NewGeneralMCTSPlayer(maxSimulations, rolloutDepth, randomPlayer.NewRandomPlayer(), valueFn)
+		var rolloutPlayer player.Player = randomPlayer.NewRandomPlayer()
+		if policyRolloutPlayer {
+			distributionFn := policyPlayer.GameToDistributionFnFromPredictor(gameToFeatures, predictor)
+			rolloutPlayer = policyPlayer.NewPolicyPlayer(distributionFn)
+		}
+
+		return monteCarloTreeSearchPlayer.NewGeneralMCTSPlayer(maxSimulations, rolloutDepth, rolloutPlayer, valueFn)
 	}
 }
