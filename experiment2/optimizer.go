@@ -23,6 +23,13 @@ import (
 	"github.com/jamOne-/kiwi-zero/utils"
 )
 
+type GamePosition struct {
+	gameId   string
+	position game.Game
+	move     game.Move
+	winner   float64
+}
+
 type trainingParams struct {
 	Xs    []game.Features
 	ys    []float64
@@ -45,9 +52,7 @@ func Optimizer(
 	modelsDirPath := filepath.Join(resultsDirPath, "models")
 	os.Mkdir(modelsDirPath, os.ModePerm)
 
-	gameFeatures := make([]game.Features, 0)
-	gameWinners := make([]float64, 0)
-	gameMoves := make([]game.Move, 0)
+	gamePositions := make([]*GamePosition, 0)
 
 	pythonOptimizerCmd := exec.Command(
 		"python3", "../python/optimizer/optimizer.py",
@@ -56,6 +61,7 @@ func Optimizer(
 		"--learning_rate", fmt.Sprintf("%f", viper.GetFloat64("OPTIMIZER_LEARNING_RATE")),
 		"--epochs", strconv.Itoa(viper.GetInt("OPTIMIZER_MAX_EPOCHS")),
 		"--batch_size", strconv.Itoa(viper.GetInt("OPTIMIZER_BATCH_SIZE")),
+		"--optimize_policy", strconv.Itoa(utils.BoolToInt(viper.GetBool("OPTIMIZER_OPTIMIZE_POLICY"))),
 		"--fully_connected", strconv.Itoa(utils.BoolToInt(viper.GetBool("OPTIMIZER_FULLY_CONNECTED"))),
 		"--fc_layers_count", strconv.Itoa(viper.GetInt("OPTIMIZER_FC_LAYERS_COUNT")),
 		"--fc_layer_units", strconv.Itoa(viper.GetInt("OPTIMIZER_FC_LAYER_UNITS")),
@@ -75,41 +81,35 @@ func Optimizer(
 
 	pythonOptimizerCmd.Start()
 
+	optimizerIteration := 1
+
 	for {
 		select {
 		case batch := <-gameResultsChan:
 			results, totalPositions := batch.Results, batch.TotalPositions
-			positions, moves, winners := splitResults(results, totalPositions)
+			positions := splitResults(results, totalPositions, optimizerIteration)
 
 			// if TRAINING_TRANSFORM_POSITIONS {
 			// 	transformPositions(positions)
 			// }
 
 			if FLIP_POSITIONS_PROB > 0 {
-				flipPositionsColors(FLIP_POSITIONS_PROB, positions, winners)
+				flipPositionsColors(FLIP_POSITIONS_PROB, positions)
 			}
 
-			// transform -1, 0, 1 winners to black winning probability
-			transformWinnersToProbabilities(winners)
+			positions = choosePositions(positions, true, MAX_POSITIONS_FROM_BATCH*len(results))
+			gamePositions = append(gamePositions, positions...)
 
-			features := createFeaturesSlice(gameToFeaturesFn, positions)
-			features, winners, moves = chooseXsAndys(features, winners, moves, MAX_POSITIONS_FROM_BATCH)
-
-			gameFeatures = append(gameFeatures, features...)
-			gameWinners = append(gameWinners, winners...)
-			gameMoves = append(gameMoves, moves...)
-
-			if len(gameFeatures) > MAX_HISTORY_LENGTH {
-				startIndex := len(gameFeatures) - MAX_HISTORY_LENGTH
-				gameFeatures = gameFeatures[startIndex:]
-				gameWinners = gameWinners[startIndex:]
-				gameMoves = gameMoves[startIndex:]
+			if len(gamePositions) > MAX_HISTORY_LENGTH {
+				startIndex := len(gamePositions) - MAX_HISTORY_LENGTH
+				gamePositions = gamePositions[startIndex:]
 			}
 
-			Xs, ys, targetMoves := chooseXsAndys(gameFeatures, gameWinners, gameMoves, TRAINING_SIZE)
-			params := &trainingParams{Xs, ys, targetMoves}
+			positions = choosePositions(gamePositions, false, TRAINING_SIZE)
+			params := positionsToTrainingParams(gameToFeaturesFn, positions)
 
 			trainingChan <- params
+			optimizerIteration += 1
 
 			// select {
 			// case trainingChan <- params:
@@ -122,64 +122,56 @@ func Optimizer(
 	}
 }
 
-func transformWinnersToProbabilities(winners []float64) {
-	for i, winner := range winners {
-		blackWinProb := (winner + 1) / 2
-		winners[i] = blackWinProb
+func choosePositions(positions []*GamePosition, sameGameAllowed bool, N int) []*GamePosition {
+	choice := make([]*GamePosition, N)
+	gameChosen := make(map[string]bool)
+
+	for i := 0; i < N; {
+		index := rand.Intn(len(positions))
+		position := positions[index]
+
+		if _, exists := gameChosen[position.gameId]; !exists || sameGameAllowed {
+			gameChosen[position.gameId] = true
+			choice[i] = position
+			i += 1
+		}
 	}
+
+	return choice
 }
 
-func createFeaturesSlice(gameToFeaturesFn game.GameToFeaturesFn, positions []game.Game) []game.Features {
-	featuresSlice := make([]game.Features, len(positions))
+func positionsToTrainingParams(gameToFeaturesFn game.GameToFeaturesFn, positions []*GamePosition) *trainingParams {
+	Xs := make([]game.Features, len(positions))
+	ys := make([]float64, len(positions))
+	moves := make([]game.Move, len(positions))
 
 	for i, position := range positions {
-		featuresSlice[i] = gameToFeaturesFn(position)
+		Xs[i] = gameToFeaturesFn(position.position)
+		ys[i] = (position.winner + 1) / 2
+		moves[i] = position.move
 	}
 
-	return featuresSlice
+	return &trainingParams{Xs, ys, moves}
 }
 
-func chooseXsAndys(
-	XsSource []game.Features,
-	ysSource []float64,
-	movesSource []game.Move,
-	N int,
-) ([]game.Features, []float64, []game.Move) {
-	Xs := make([]game.Features, N)
-	ys := make([]float64, N)
-	moves := make([]game.Move, N)
-
-	for i := 0; i < N; i++ {
-		index := rand.Intn(len(XsSource))
-		Xs[i] = XsSource[index]
-		ys[i] = ysSource[index]
-		moves[i] = movesSource[index]
-	}
-
-	return Xs, ys, moves
-}
-
-func splitResults(results []*runner.GameResult, totalPositions int) ([]game.Game, []game.Move, []float64) {
-	gamesList := make([]game.Game, totalPositions)
-	winners := make([]float64, totalPositions)
-	moves := make([]game.Move, totalPositions)
+func splitResults(results []*runner.GameResult, totalPositions int, iteration int) []*GamePosition {
+	gamePositions := make([]*GamePosition, totalPositions)
 
 	index := 0
-	for _, result := range results {
+	for gameIndex, result := range results {
 		winner := float64(result.Winner)
 
 		for _, tuple := range result.History {
 			game := tuple.Game
 			move := tuple.Move
+			id := fmt.Sprintf("%d-%d", iteration, gameIndex)
 
-			gamesList[index] = game
-			winners[index] = winner
-			moves[index] = move
+			gamePositions[index] = &GamePosition{id, game, move, winner}
 			index += 1
 		}
 	}
 
-	return gamesList, moves, winners
+	return gamePositions
 }
 
 func randomPositionTransformation(position game.Game) {
@@ -214,11 +206,11 @@ func transformPositions(positions []game.Game) {
 	}
 }
 
-func flipPositionsColors(flipProb float64, positions []game.Game, winners []float64) {
-	for i, position := range positions {
+func flipPositionsColors(flipProb float64, positions []*GamePosition) {
+	for _, position := range positions {
 		if rand.Float64() < flipProb {
-			flipGameColors(position)
-			winners[i] *= -1
+			flipGameColors(position.position)
+			position.winner *= -1
 		}
 	}
 }

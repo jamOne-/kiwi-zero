@@ -35,9 +35,10 @@ import (
 // }
 
 var FEATURES_FN_TO_SHAPE_DICT = map[string]string{
-	"board3":      "(8,8,3)",
-	"boardmoves":  "(8,8,4)",
-	"paddedmoves": "(10,10,5)",
+	"board3":         "(8,8,3)",
+	"boardmoves":     "(8,8,4)",
+	"paddedmoves":    "(10,10,5)",
+	"board1features": "(72,1,1)",
 }
 
 func ConvertReversiFnToGeneralFeatuersFn(reversiFn func(reversiGame *reversi.ReversiGame) game.Features) game.GameToFeaturesFn {
@@ -196,53 +197,58 @@ func CreateMinMaxValueFn(gameToFeaturesFn game.GameToFeaturesFn, predictor predi
 // 	return features
 // }
 
-// func ReversiToFeaturesExtended(reversiGame *reversi.ReversiGame) *mat.VecDense {
-// 	numberOfFeaturesExtended := 8*8 + 4 + 4
-// 	features := mat.NewVecDense(numberOfFeaturesExtended, nil)
-// 	blackCount, whiteCount := 0.0, 0.0
+func ReversiToFeaturesExtended(reversiGame *reversi.ReversiGame) game.Features {
+	numberOfFeaturesExtended := 8*8 + 4 + 4
+	features := make([][][]float32, numberOfFeaturesExtended)
+	for row := 0; row < numberOfFeaturesExtended; row++ {
+		features[row] = make([][]float32, 1)
+		features[row][0] = make([]float32, 1)
+	}
 
-// 	for i, field := range reversiGame.Board {
-// 		features.SetVec(i, float64(field))
+	blackCount, whiteCount := 0.0, 0.0
 
-// 		if field == game.BLACK {
-// 			blackCount += 1.0
-// 		} else if field == game.WHITE {
-// 			whiteCount += 1.0
-// 		}
-// 	}
+	for i, field := range reversiGame.Board {
+		features[i][0][0] = float32(field)
 
-// 	countDifference := blackCount - whiteCount
-// 	countQuotient := calculateQuotient(blackCount, whiteCount)
-// 	features.SetVec(64, blackCount)
-// 	features.SetVec(65, whiteCount)
-// 	features.SetVec(66, countDifference)
-// 	features.SetVec(67, countQuotient)
+		if field == game.BLACK {
+			blackCount += 1.0
+		} else if field == game.WHITE {
+			whiteCount += 1.0
+		}
+	}
 
-// 	currentPlayer := reversiGame.GetCurrentPlayerColor()
-// 	reversiGame.Turn = game.BLACK
-// 	blackMobility := float64(len(reversiGame.GetPossibleMoves()))
-// 	reversiGame.Turn = game.WHITE
-// 	whiteMobility := float64(len(reversiGame.GetPossibleMoves()))
-// 	reversiGame.Turn = currentPlayer
+	countDifference := blackCount - whiteCount
+	countQuotient := calculateQuotient(blackCount, whiteCount)
+	features[64][0][0] = float32(blackCount)
+	features[65][0][0] = float32(whiteCount)
+	features[66][0][0] = float32(countDifference)
+	features[67][0][0] = float32(countQuotient)
 
-// 	mobilityDifference := blackMobility - whiteMobility
-// 	mobilityQuotient := calculateQuotient(blackMobility, whiteMobility)
+	currentPlayer := reversiGame.GetCurrentPlayerColor()
+	reversiGame.Turn = game.BLACK
+	blackMobility := float64(len(reversiGame.GetPossibleMoves()))
+	reversiGame.Turn = game.WHITE
+	whiteMobility := float64(len(reversiGame.GetPossibleMoves()))
+	reversiGame.Turn = currentPlayer
 
-// 	features.SetVec(68, blackMobility)
-// 	features.SetVec(69, whiteMobility)
-// 	features.SetVec(70, mobilityDifference)
-// 	features.SetVec(71, mobilityQuotient)
+	mobilityDifference := blackMobility - whiteMobility
+	mobilityQuotient := calculateQuotient(blackMobility, whiteMobility)
 
-// 	return features
-// }
+	features[68][0][0] = float32(blackMobility)
+	features[69][0][0] = float32(whiteMobility)
+	features[70][0][0] = float32(mobilityDifference)
+	features[71][0][0] = float32(mobilityQuotient)
 
-// func calculateQuotient(a float64, b float64) float64 {
-// 	if a > b {
-// 		return a / (a + b)
-// 	} else {
-// 		return -b / (a + b)
-// 	}
-// }
+	return features
+}
+
+func calculateQuotient(a float64, b float64) float64 {
+	if a > b {
+		return a / (a + b)
+	} else {
+		return -b / (a + b)
+	}
+}
 
 // func SaveWeightsToFile(weights *mat.VecDense, fileName string) {
 // 	file, _ := os.Create(fileName)

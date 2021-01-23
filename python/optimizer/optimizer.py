@@ -11,6 +11,7 @@ parser.add_argument('--learning_rate', default='1e-3', type=float)
 parser.add_argument('--epochs', default='1000', type=int)
 parser.add_argument('--batch_size', default='16', type=int)
 parser.add_argument('--input_shape', default="(8, 8, 3)", type=str)
+parser.add_argument('--optimize_policy', default=1.0, type=float)
 
 parser.add_argument('--fully_connected', default=0, type=int)
 parser.add_argument('--fc_dropout', default=0.5, type=float)
@@ -37,10 +38,15 @@ from tensorflow.keras import layers
 def train_model(args, model, Xs, ys, policies):
     X_train, X_test, y_train, y_test, policies_train, policies_test = train_test_split(Xs, ys, policies, test_size=0.2)
 
+    if args.optimize_policy:
+        monitor = 'val_loss'
+    else:
+        monitor = 'val_value_loss'
+
     callbacks = [
         tf.keras.callbacks.EarlyStopping(
             patience=10,
-            monitor='val_loss'
+            monitor=monitor
         )
     ]
 
@@ -67,7 +73,7 @@ def train_model(args, model, Xs, ys, policies):
 
 
 def read_features(Xs_shape):
-    Xs = [[[list(map(int, input().rstrip().split(" ")))
+    Xs = [[[list(map(float, input().rstrip().split(" ")))
             for k in range(Xs_shape[2])]
            for j in range(Xs_shape[1])]
           for i in range(Xs_shape[0])]
@@ -89,6 +95,7 @@ if __name__ == "__main__":
             layers_count=args.fc_layers_count,
             layer_units=args.fc_layer_units,
             dropout_rate=args.fc_dropout,
+            optimize_policy=bool(args.optimize_policy),
         )
     else:
         conv_filters = eval(args.conv_filters)
@@ -102,7 +109,9 @@ if __name__ == "__main__":
         "value_out": "binary_crossentropy",
         "policy_out": "categorical_crossentropy",
     }
-    loss_weights = {"value_out": 1.0, "policy_out": 1.0}
+    
+    policy_weight = args.optimize_policy
+    loss_weights = {"value_out": 1.0, "policy_out": policy_weight}
 
     model.compile(
         optimizer=tf.keras.optimizers.Adam(args.learning_rate),

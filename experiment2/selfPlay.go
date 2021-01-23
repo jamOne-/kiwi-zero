@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/jamOne-/kiwi-zero/player"
 	"github.com/jamOne-/kiwi-zero/predictor"
@@ -17,9 +18,7 @@ func SelfPlayLoop(
 	initialPredictor predictor.Predictor,
 	selfPlayFactory player.PlayerFactory,
 ) {
-	// EPSILON := viper.GetFloat64("EPSILON")
 	GAMES_PER_ITERATION := viper.GetInt("GAMES_PER_ITERATION")
-	// MINMAX_DEPTH := viper.GetInt("MINMAX_DEPTH")
 	SELFPLAY_GAMES_AT_ONCE := viper.GetInt("SELFPLAY_GAMES_AT_ONCE")
 
 	if SELFPLAY_GAMES_AT_ONCE == 0 {
@@ -27,30 +26,31 @@ func SelfPlayLoop(
 	}
 
 	selfPlay_i := 1
-	// selfPlayPlayer := minMaxPlayer.NewEpsilonGreedyMinMaxPlayer(MINMAX_DEPTH, EPSILON, initialValueFn)
-	// selfPlayPlayer := minMaxPlayer.NewSoftMaxMinMaxPlayer(MINMAX_DEPTH, initialValueFn)
 	selfPlayPlayer := selfPlayFactory(initialPredictor)
 
 	for {
 		select {
 		case predictor := <-bestPredictors:
 			if predictor != nil {
-				// selfPlayPlayer = minMaxPlayer.NewEpsilonGreedyMinMaxPlayer(MINMAX_DEPTH, EPSILON, predictor)
-				// selfPlayPlayer = minMaxPlayer.NewSoftMaxMinMaxPlayer(MINMAX_DEPTH, predictor)
 				selfPlayPlayer = selfPlayFactory(predictor)
 			}
 
 			// default:
+			gamesCount := GAMES_PER_ITERATION
+			if selfPlay_i == 1 {
+				gamesCount = GAMES_PER_ITERATION * int(2+math.Ceil(viper.GetFloat64("OPTIMIZER_TRAINING_SIZE")/float64(GAMES_PER_ITERATION)))
+			}
+
 			results, totalPositions := runner.PlayNGamesAsync(
 				gameFactory,
 				/* saveHistory */ true,
 				selfPlayPlayer,
 				selfPlayPlayer,
-				GAMES_PER_ITERATION,
+				gamesCount,
 				SELFPLAY_GAMES_AT_ONCE,
 			)
 
-			fmt.Printf("Selfplay (%d): finished %d games\n", selfPlay_i, GAMES_PER_ITERATION)
+			fmt.Printf("Selfplay (%d): finished %d games\n", selfPlay_i, gamesCount)
 
 			selfPlay_i += 1
 			resultsBatch := &runner.GameResultsBatch{Results: results, TotalPositions: totalPositions}

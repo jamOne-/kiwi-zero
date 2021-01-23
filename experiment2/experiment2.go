@@ -30,9 +30,10 @@ import (
 )
 
 var REVERSI_TO_FEATURES_FN_DICT = map[string]game.GameToFeaturesFn{
-	"board3":      reversiValueFns.ConvertReversiFnToGeneralFeatuersFn(reversiValueFns.ReversiToOneHotBoard3),
-	"boardmoves":  reversiValueFns.ConvertReversiFnToGeneralFeatuersFn(reversiValueFns.ReversiToOneHotBoardMoves),
-	"paddedmoves": reversiValueFns.ConvertReversiFnToGeneralFeatuersFn(reversiValueFns.ReversiToOneHotBoardPaddedMoves),
+	"board3":         reversiValueFns.ConvertReversiFnToGeneralFeatuersFn(reversiValueFns.ReversiToOneHotBoard3),
+	"boardmoves":     reversiValueFns.ConvertReversiFnToGeneralFeatuersFn(reversiValueFns.ReversiToOneHotBoardMoves),
+	"paddedmoves":    reversiValueFns.ConvertReversiFnToGeneralFeatuersFn(reversiValueFns.ReversiToOneHotBoardPaddedMoves),
+	"board1features": reversiValueFns.ConvertReversiFnToGeneralFeatuersFn(reversiValueFns.ReversiToFeaturesExtended),
 }
 
 func getPlayerFactory(
