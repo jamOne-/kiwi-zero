@@ -125,12 +125,12 @@ def get_fully_connected_model(
     if optimize_policy:
         policy_out = layers.Dense(layer_units, activation='relu')(policy_out)
         policy_out = layers.Dropout(dropout_rate)(policy_out)
-        policy_out = layers.Dense(layer_units, activation='relu')(policy_out)
-        policy_out = layers.Dropout(dropout_rate)(policy_out)
-        policy_out = layers.Dense(layer_units, activation='relu')(policy_out)
-        policy_out = layers.Dropout(dropout_rate)(policy_out)
-        policy_out = layers.Dense(layer_units, activation='relu')(policy_out)
-        policy_out = layers.Dropout(dropout_rate)(policy_out)
+        # policy_out = layers.Dense(layer_units, activation='relu')(policy_out)
+        # policy_out = layers.Dropout(dropout_rate)(policy_out)
+        # policy_out = layers.Dense(layer_units, activation='relu')(policy_out)
+        # policy_out = layers.Dropout(dropout_rate)(policy_out)
+        # policy_out = layers.Dense(layer_units, activation='relu')(policy_out)
+        # policy_out = layers.Dropout(dropout_rate)(policy_out)
 
     policy_out = layers.Dense(65, activation='softmax', name='policy_out')(policy_out)
 

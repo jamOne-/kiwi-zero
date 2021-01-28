@@ -39,6 +39,7 @@ var FEATURES_FN_TO_SHAPE_DICT = map[string]string{
 	"boardmoves":     "(8,8,4)",
 	"paddedmoves":    "(10,10,5)",
 	"board1features": "(72,1,1)",
+	"board1":         "(64,1,1)",
 }
 
 func ConvertReversiFnToGeneralFeatuersFn(reversiFn func(reversiGame *reversi.ReversiGame) game.Features) game.GameToFeaturesFn {
@@ -142,28 +143,20 @@ func CreateMinMaxValueFn(gameToFeaturesFn game.GameToFeaturesFn, predictor predi
 	}
 }
 
-// func ReversiToFeatures(reversiGame *reversi.ReversiGame) *mat.VecDense {
-// 	features := mat.NewVecDense(NUMBER_OF_FEATURES, nil)
+func ReversiToFeatures(reversiGame *reversi.ReversiGame) game.Features {
+	numberOfFeatures := 8 * 8
+	features := make([][][]float32, numberOfFeatures)
+	for row := 0; row < numberOfFeatures; row++ {
+		features[row] = make([][]float32, 1)
+		features[row][0] = make([]float32, 1)
+	}
 
-// 	for i, field := range reversiGame.Board {
-// 		features.SetVec(i, float64(field))
-// 	}
+	for i, field := range reversiGame.Board {
+		features[i][0][0] = float32(field)
+	}
 
-// 	countFeature := mat.Sum(features)
-// 	features.SetVec(NUMBER_OF_FEATURES-2, countFeature)
-
-// 	currentPlayer := reversiGame.GetCurrentPlayerColor()
-// 	reversiGame.Turn = game.BLACK
-// 	blackMobility := len(reversiGame.GetPossibleMoves())
-// 	reversiGame.Turn = game.WHITE
-// 	whiteMobility := len(reversiGame.GetPossibleMoves())
-// 	reversiGame.Turn = currentPlayer
-
-// 	mobilityFeature := float64(blackMobility - whiteMobility)
-// 	features.SetVec(NUMBER_OF_FEATURES-1, mobilityFeature)
-
-// 	return features
-// }
+	return features
+}
 
 // func ReversiToFeaturesTriangle(reversiGame *reversi.ReversiGame) *mat.VecDense {
 // 	triangleNumberOfFeatures := 4 + 3 + 2 + 1 + 2

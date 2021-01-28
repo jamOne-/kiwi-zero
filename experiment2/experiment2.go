@@ -34,6 +34,7 @@ var REVERSI_TO_FEATURES_FN_DICT = map[string]game.GameToFeaturesFn{
 	"boardmoves":     reversiValueFns.ConvertReversiFnToGeneralFeatuersFn(reversiValueFns.ReversiToOneHotBoardMoves),
 	"paddedmoves":    reversiValueFns.ConvertReversiFnToGeneralFeatuersFn(reversiValueFns.ReversiToOneHotBoardPaddedMoves),
 	"board1features": reversiValueFns.ConvertReversiFnToGeneralFeatuersFn(reversiValueFns.ReversiToFeaturesExtended),
+	"board1":         reversiValueFns.ConvertReversiFnToGeneralFeatuersFn(reversiValueFns.ReversiToFeatures),
 }
 
 func getPlayerFactory(
@@ -107,7 +108,7 @@ func main() {
 	// bestValueFnsChan <- initialValueFn
 	bestPredictorsChan <- initialPredictor
 
-	// f, err := os.Create("cpu2021_tfgpu.prof")
+	// f, err := os.Create("cpuboard1features.prof")
 	// if err != nil {
 	// 	log.Fatal("could not create CPU profile: ", err)
 	// }
