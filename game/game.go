@@ -13,6 +13,7 @@ type Game interface {
 	UndoLastMove()
 	GetPossibleMoves() []Move
 	GetCurrentPlayerColor() PlayerColor
+	GetTurnNumber() int
 	IsGameFinished() (bool, PlayerColor)
 	DrawBoard()
 	SerializeBoard(flipColors bool) string

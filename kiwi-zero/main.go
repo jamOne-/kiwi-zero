@@ -6,48 +6,71 @@ import (
 	"sort"
 	"time"
 
-	tfpredictor "github.com/jamOne-/kiwi-zero/TFPredictor"
-	"github.com/jamOne-/kiwi-zero/policyPlayer"
+	"github.com/jamOne-/kiwi-zero/monteCarloTreeSearchPlayer"
 	"github.com/jamOne-/kiwi-zero/randomPlayer"
+
+	tfpredictor "github.com/jamOne-/kiwi-zero/TFPredictor"
+	"github.com/jamOne-/kiwi-zero/edaxPlayer"
 	"github.com/jamOne-/kiwi-zero/reversiValueFns"
 
 	"github.com/jamOne-/kiwi-zero/game"
 	"github.com/jamOne-/kiwi-zero/reversi"
 )
 
+func getInitialValueFn() game.ValueFn {
+	return func(game game.Game) float64 {
+		return 0.5
+	}
+}
+
 func main() {
 	totalScore := 0
 	times1, times2 := make([]time.Duration, 0), make([]time.Duration, 0)
-	NUMBER_OF_GAMES := 100
+	NUMBER_OF_GAMES := 20
 
 	// 1 layer:
 	// tfpredictor := tfpredictor.NewTFPredictor("../experiment2/results/2020-11-04-211132/models/150")
 	// 7 layers trained with smaller pool and capped positions
-	// tfpredictor := tfpredictor.NewTFPredictor("../experiment2/results/2020-12-01-140644/models/123")
+	// tfpredictor := tfpredictor.NewTFPredictor("../experiment2/results/2020-12-01-140644/models/100")
 	// conv first try
 	// tfpredictor := tfpredictor.NewTFPredictor("../experiment2/results/2020-11-26-202747/models/350")
 	// conv softmax minmax 3
-	tfpredictor := tfpredictor.NewTFPredictor("../experiment2/results/2020-12-07-222844/models/250")
-	gameToFeaturesFn := reversiValueFns.ConvertReversiFnToGeneralFeatuersFn(reversiValueFns.ReversiToOneHotBoardMoves)
-	gameToDistributionFn := policyPlayer.GameToDistributionFnFromTfPredictor(gameToFeaturesFn, tfpredictor)
+	// tfpredictor := tfpredictor.NewTFPredictor("../experiment2/results/2020-12-07-222844/models/250")
+	// gameToFeaturesFn := reversiValueFns.ConvertReversiFnToGeneralFeatuersFn(reversiValueFns.ReversiToOneHotBoardMoves)
+	//
+	tfpredictor := tfpredictor.NewTFPredictor("../experiment2/results/2021-01-23-205906/models/2525")
+	gameToFeaturesFn := reversiValueFns.ConvertReversiFnToGeneralFeatuersFn(reversiValueFns.ReversiToFeaturesExtended)
 
-	// valueFn := reversiValueFns.CreateMinMaxValueFn(gameToFeaturesFn, tfpredictor)
+	// gameToDistributionFn := policyPlayer.GameToDistributionFnFromTfPredictor(gameToFeaturesFn, tfpredictor)
+
+	valueFn := reversiValueFns.CreateMinMaxValueFn(gameToFeaturesFn, tfpredictor)
 
 	for gameNumber := 0; gameNumber < NUMBER_OF_GAMES; gameNumber += 1 {
 		g := reversi.NewReversiGame()
 		// player1 := humanPlayer.NewHumanPlayer()
-		// player1 := monteCarloTreeSearchPlayer.NewThreadedMonteCarloTreeSearchPlayer(2000, 1)
-		player1 := policyPlayer.NewPolicyPlayer(gameToDistributionFn)
+		// player2 := monteCarloTreeSearchPlayer.NewThreadedMonteCarloTreeSearchPlayer(1000, 1)
+		// player2 := randomPlayer.NewRandomPlayer()
+		// player1 := policyPlayer.NewPolicyPlayer(gameToDistributionFn)
 		// player2 := minMaxPlayer.NewPredictorMinMaxPlayer(4)
 		// player2 := minMaxPlayer.NewMinMaxPlayer(7)
-		player2 := randomPlayer.NewRandomPlayer()
+		// player2 := randomPlayer.NewRandomPlayer()
+		player1 := monteCarloTreeSearchPlayer.NewGeneralMCTSPlayer(2000, 99, randomPlayer.NewRandomPlayer(), valueFn)
 
-		// player2 := minMaxPlayer.NewMinMaxPlayer(4, valueFn)
+		// player1 := minMaxPlayer.NewMinMaxPlayer(4, valueFn)
+		edax := edaxPlayer.NewEdaxPlayer(-64, 64, 1, 100)
+		random := randomPlayer.NewRandomPlayer()
+		player2 := edax
 
 		// g.DrawBoard()
 		// fmt.Println("")
 
 		finished, winner := false, int8(0)
+
+		START_RANDOM_MOVES := 0
+		for i := 0; i < START_RANDOM_MOVES; i++ {
+			g.MakeMove(random.SelectMoveDifferentThan(g, reversi.PASS_MOVE))
+			g.MakeMove(random.SelectMoveDifferentThan(g, reversi.PASS_MOVE))
+		}
 
 		for !finished {
 			var move game.Move
@@ -70,6 +93,9 @@ func main() {
 			// fmt.Println(len(policy))
 			// fmt.Println("")
 		}
+		g.DrawBoard()
+
+		edax.ClosePlayer()
 
 		fmt.Printf("Game %d/%d: %d wins\n", gameNumber+1, NUMBER_OF_GAMES, (-winner+1)/2+1)
 		totalScore += int(winner)

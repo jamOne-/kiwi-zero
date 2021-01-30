@@ -18,3 +18,19 @@ func (player *RandomPlayer) SelectMove(g game.Game) game.Move {
 	possibleMoves := g.GetPossibleMoves()
 	return possibleMoves[rand.Intn(len(possibleMoves))]
 }
+
+func (player *RandomPlayer) SelectMoveDifferentThan(g game.Game, move game.Move) game.Move {
+	possibleMoves := g.GetPossibleMoves()
+	possibilities := len(possibleMoves)
+
+	if possibilities == 1 {
+		return possibleMoves[0]
+	}
+
+	selectedMove := move
+	for selectedMove == move {
+		selectedMove = possibleMoves[rand.Intn(possibilities)]
+	}
+
+	return selectedMove
+}
