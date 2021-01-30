@@ -90,11 +90,10 @@ func comparePlayersAndSaveResults(
 	numberOfGames int,
 	maxGamesAtOnce int,
 ) {
-
 	resultsFile, _ := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	defer resultsFile.Close()
 
-	player1Wins := runner.ComparePlayersAsync(gameFactory, player1, player2, numberOfGames, maxGamesAtOnce)
+	player1Wins := runner.ComparePlayersAsync(gameFactory, runner.FactorizePlayer(player1), runner.FactorizePlayer(player2), numberOfGames, maxGamesAtOnce)
 	resultsInfo := fmt.Sprintf("%s won %d/%d games versus %s\n", player1Name, player1Wins, numberOfGames, player2Name)
 	fmt.Print(resultsInfo)
 	fmt.Fprint(resultsFile, resultsInfo)

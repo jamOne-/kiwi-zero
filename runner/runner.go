@@ -1,6 +1,7 @@
 package runner
 
 import (
+	"fmt"
 	"math"
 	"sync"
 
@@ -24,6 +25,13 @@ type GameResult struct {
 }
 
 type NewGameFactory func() game.Game
+type NewPlayerFactory func() player.Player
+
+func FactorizePlayer(p player.Player) NewPlayerFactory {
+	return func() player.Player {
+		return p
+	}
+}
 
 func PlayGame(
 	g game.Game,
@@ -93,8 +101,8 @@ func PlayNGames(
 func PlayNGamesAsync(
 	newGameFactory NewGameFactory,
 	saveHistory bool,
-	player1 player.Player,
-	player2 player.Player,
+	player1Factory NewPlayerFactory,
+	player2Factory NewPlayerFactory,
 	n int,
 	maxGamesAtOnce int,
 ) ([]*GameResult, int) {
@@ -103,7 +111,7 @@ func PlayNGamesAsync(
 
 	for i := 0; i < maxGamesAtOnce; i++ {
 		newGame := newGameFactory()
-		go PlayGameAsyncWrapper(newGame, player1, player2, saveHistory, resultsChan, nil)
+		go PlayGameAsyncWrapper(newGame, player1Factory(), player2Factory(), saveHistory, resultsChan, nil)
 	}
 
 	gamesRan := maxGamesAtOnce
@@ -114,10 +122,11 @@ func PlayNGamesAsync(
 		result := <-resultsChan
 		results[i] = result
 		totalPositions += len(result.History)
+		fmt.Println(i)
 
 		if gamesRan < n {
 			newGame := newGameFactory()
-			go PlayGameAsyncWrapper(newGame, player1, player2, saveHistory, resultsChan, nil)
+			go PlayGameAsyncWrapper(newGame, player1Factory(), player2Factory(), saveHistory, resultsChan, nil)
 			gamesRan += 1
 		}
 	}
@@ -158,15 +167,15 @@ func ComparePlayers(
 
 func ComparePlayersAsync(
 	gameFactory NewGameFactory,
-	player1 player.Player,
-	player2 player.Player,
+	player1Factory NewPlayerFactory,
+	player2Factory NewPlayerFactory,
 	numberOfGames int,
 	maxGamesAtOnce int,
 ) int {
 	halfOfGames := numberOfGames / 2
 	player1Wins := 0
 
-	results, _ := PlayNGamesAsync(gameFactory, false, player1, player2, halfOfGames, maxGamesAtOnce)
+	results, _ := PlayNGamesAsync(gameFactory, false, player1Factory, player2Factory, halfOfGames, maxGamesAtOnce)
 
 	for _, result := range results {
 		if result.Winner == game.BLACK {
@@ -174,7 +183,7 @@ func ComparePlayersAsync(
 		}
 	}
 
-	results, _ = PlayNGamesAsync(gameFactory, false, player2, player1, numberOfGames-halfOfGames, maxGamesAtOnce)
+	results, _ = PlayNGamesAsync(gameFactory, false, player2Factory, player1Factory, numberOfGames-halfOfGames, maxGamesAtOnce)
 
 	for _, result := range results {
 		if result.Winner == game.WHITE {
@@ -187,14 +196,14 @@ func ComparePlayersAsync(
 
 func ComparePlayersAsyncWrapper(
 	gameFactory NewGameFactory,
-	player1 player.Player,
-	player2 player.Player,
+	player1Factory NewPlayerFactory,
+	player2Factory NewPlayerFactory,
 	numberOfGames int,
 	maxGamesAtOnce int,
 	resultChan chan int,
 	waitGroup *sync.WaitGroup,
 ) {
-	resultChan <- ComparePlayersAsync(gameFactory, player1, player2, numberOfGames, maxGamesAtOnce)
+	resultChan <- ComparePlayersAsync(gameFactory, player1Factory, player2Factory, numberOfGames, maxGamesAtOnce)
 
 	if waitGroup != nil {
 		waitGroup.Done()
@@ -208,6 +217,7 @@ func ComparePlayerWithOthersAsync(
 	numberOfGames int,
 	maxGamesAtOnce int,
 ) int {
+	playerFactory := FactorizePlayer(player)
 	numberOfPlayers := len(players)
 
 	// TODO: find a better way
@@ -223,7 +233,8 @@ func ComparePlayerWithOthersAsync(
 
 	for _, opponent := range players {
 		// gamesToPlay := gamesLeft / (numberOfPlayers - i)
-		playerWins += ComparePlayersAsync(gameFactory, player, opponent, gamesPerPlayer, maxGamesPerPlayer)
+		opponentFactory := FactorizePlayer(opponent)
+		playerWins += ComparePlayersAsync(gameFactory, playerFactory, opponentFactory, gamesPerPlayer, maxGamesPerPlayer)
 
 		gamesLeft -= gamesPerPlayer
 	}

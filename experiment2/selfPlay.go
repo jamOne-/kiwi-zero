@@ -17,6 +17,7 @@ func SelfPlayLoop(
 	gameFactory runner.NewGameFactory,
 	initialPredictor predictor.Predictor,
 	selfPlayFactory player.PlayerFactory,
+	teacherFactory runner.NewPlayerFactory,
 ) {
 	GAMES_PER_ITERATION := viper.GetInt("GAMES_PER_ITERATION")
 	SELFPLAY_GAMES_AT_ONCE := viper.GetInt("SELFPLAY_GAMES_AT_ONCE")
@@ -41,11 +42,17 @@ func SelfPlayLoop(
 				gamesCount = GAMES_PER_ITERATION * int(2+math.Ceil(viper.GetFloat64("OPTIMIZER_TRAINING_SIZE")/float64(GAMES_PER_ITERATION)))
 			}
 
+			selfPlayRunnerFactory := runner.FactorizePlayer(selfPlayPlayer)
+			opponentFactory := selfPlayRunnerFactory
+			if teacherFactory != nil {
+				opponentFactory = teacherFactory
+			}
+
 			results, totalPositions := runner.PlayNGamesAsync(
 				gameFactory,
 				/* saveHistory */ true,
-				selfPlayPlayer,
-				selfPlayPlayer,
+				selfPlayRunnerFactory,
+				opponentFactory,
 				gamesCount,
 				SELFPLAY_GAMES_AT_ONCE,
 			)

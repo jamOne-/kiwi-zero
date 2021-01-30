@@ -9,6 +9,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jamOne-/kiwi-zero/edaxPlayer"
 	"github.com/jamOne-/kiwi-zero/policyPlayer"
 	"github.com/jamOne-/kiwi-zero/randomPlayer"
 
@@ -95,6 +96,11 @@ func main() {
 		playersToCompareWith = append(playersToCompareWith, &PlayerToCompare{"OLD MinMax", oldMinMaxPlayer})
 	}
 
+	var selfPlayTeacherFactory runner.NewPlayerFactory = nil
+	if viper.GetBool("SELFPLAY_TEACHER") {
+		selfPlayTeacherFactory = getEdaxRunnerFactory(-64, 64, viper.GetInt("SELFPLAY_EDAX_DEPTH"), 100)
+	}
+
 	selfPlayPlayerFactory := getPlayerFactory(gameToFeaturesFn, true, viper.GetString("SELFPLAY_PLAYER_TYPE"))
 	evaluatorPlayerFactory := getPlayerFactory(gameToFeaturesFn, false, viper.GetString("EVALUATOR_PLAYER_TYPE"))
 
@@ -102,7 +108,7 @@ func main() {
 	bestPredictorsChan := make(chan predictor.Predictor)
 	newPredictorsChan := make(chan predictor.Predictor)
 
-	go SelfPlayLoop(bestPredictorsChan, gameResultsChan, reversiGameFactory, initialPredictor, selfPlayPlayerFactory)
+	go SelfPlayLoop(bestPredictorsChan, gameResultsChan, reversiGameFactory, initialPredictor, selfPlayPlayerFactory, selfPlayTeacherFactory)
 	go Optimizer(gameResultsChan, newPredictorsChan, gameToFeaturesFn, resultsDirPath)
 	go Evaluator(newPredictorsChan, bestPredictorsChan, reversiGameFactory, initialPredictor, evaluatorPlayerFactory, playersToCompareWith, resultsDirPath)
 	// bestValueFnsChan <- initialValueFn
@@ -186,5 +192,11 @@ func getMCTSFactory(gameToFeatures game.GameToFeaturesFn, maxSimulations int, ro
 		}
 
 		return monteCarloTreeSearchPlayer.NewGeneralMCTSPlayer(maxSimulations, rolloutDepth, rolloutPlayer, valueFn)
+	}
+}
+
+func getEdaxRunnerFactory(alpha float64, beta float64, depth int, probcut int) runner.NewPlayerFactory {
+	return func() player.Player {
+		return edaxPlayer.NewEdaxPlayer(alpha, beta, depth, probcut)
 	}
 }
