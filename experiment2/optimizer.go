@@ -61,6 +61,7 @@ func Optimizer(
 		"--learning_rate", fmt.Sprintf("%f", viper.GetFloat64("OPTIMIZER_LEARNING_RATE")),
 		"--epochs", strconv.Itoa(viper.GetInt("OPTIMIZER_MAX_EPOCHS")),
 		"--batch_size", strconv.Itoa(viper.GetInt("OPTIMIZER_BATCH_SIZE")),
+		"--regularizer_const", fmt.Sprintf("%f", viper.GetFloat64("OPTIMIZER_REGULARIZER_CONST")),
 		"--optimize_policy", strconv.Itoa(utils.BoolToInt(viper.GetBool("OPTIMIZER_OPTIMIZE_POLICY"))),
 		"--fully_connected", strconv.Itoa(utils.BoolToInt(viper.GetBool("OPTIMIZER_FULLY_CONNECTED"))),
 		"--fc_layers_count", strconv.Itoa(viper.GetInt("OPTIMIZER_FC_LAYERS_COUNT")),

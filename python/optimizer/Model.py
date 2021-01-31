@@ -1,5 +1,5 @@
 import tensorflow as tf
-from tensorflow.keras import layers, models, utils
+from tensorflow.keras import layers, models, utils, regularizers
 
 
 def add_ResidualLayer(inputs, filters):
@@ -72,6 +72,7 @@ def add_PolicyHead(model):
 def get_model(
     input_shape=(8, 8, 3),
     conv_filters=[32, 32, 64, 64],
+    regularizer_const=1e-4,
     optimize_policy=True
 ):
     inputs = layers.Input(shape=input_shape)
@@ -82,18 +83,30 @@ def get_model(
             filters,
             kernel_size=(3, 3),
             padding='same',
+            kernel_regularizer=regularizers.l2(regularizer_const),
+            bias_regularizer=regularizers.l2(regularizer_const),
             activation='relu',
         )(model)
 
 
     value_out = layers.Flatten()(model)
-    value_out = layers.Dense(128, activation='relu')(value_out)
+    value_out = layers.Dense(
+        128,
+        activation='relu',
+        kernel_regularizer=regularizers.l2(regularizer_const),
+        bias_regularizer=regularizers.l2(regularizer_const),
+    )(value_out)
     # value_out = layers.Dropout(0.25)(value_out)
     value_out = layers.Dense(1, activation='sigmoid', name='value_out')(value_out)
 
     policy_out = layers.Flatten()(model)
     if optimize_policy:
-        policy_out = layers.Dense(128, activation='relu')(policy_out)
+        policy_out = layers.Dense(
+            128,
+            activation='relu',
+            kernel_regularizer=regularizers.l2(regularizer_const),
+            bias_regularizer=regularizers.l2(regularizer_const),
+        )(policy_out)
         # policy_out = layers.Dropout(0.25)(policy_out)
     policy_out = layers.Dense(65, activation='softmax', name='policy_out')(policy_out)
     
@@ -110,7 +123,8 @@ def get_fully_connected_model(
     input_shape=(8, 8, 3),
     layers_count=1,
     layer_units=128,
-    dropout_rate=0.5,
+    dropout_rate=0.25,
+    regularizer_const=1e-4,
     optimize_policy=True,
 ):
     inputs = layers.Input(shape=input_shape)
@@ -118,7 +132,12 @@ def get_fully_connected_model(
 
     value_out = model
     for i in range(layers_count - 1):
-        value_out = layers.Dense(layer_units, activation='relu')(value_out)
+        value_out = layers.Dense(
+            layer_units,
+            kernel_regularizer=regularizers.l2(regularizer_const),
+            bias_regularizer=regularizers.l2(regularizer_const),
+            activation='relu',
+        )(value_out)
         value_out = layers.Dropout(dropout_rate)(value_out)
     value_out = layers.Dense(1, activation='sigmoid', name='value_out')(value_out)
 

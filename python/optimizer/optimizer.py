@@ -7,9 +7,10 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--logfile', default='optimizer_log.txt', type=str)
 parser.add_argument('--models_directory', type=str)
 
-parser.add_argument('--learning_rate', default='1e-3', type=float)
-parser.add_argument('--epochs', default='1000', type=int)
-parser.add_argument('--batch_size', default='16', type=int)
+parser.add_argument('--learning_rate', default=1e-3, type=float)
+parser.add_argument('--epochs', default=1000, type=int)
+parser.add_argument('--batch_size', default=16, type=int)
+parser.add_argument('--regularizer_const', default=5e-4, type=float)
 parser.add_argument('--input_shape', default="(8, 8, 3)", type=str)
 parser.add_argument('--optimize_policy', default=1.0, type=float)
 
@@ -95,6 +96,7 @@ if __name__ == "__main__":
             layers_count=args.fc_layers_count,
             layer_units=args.fc_layer_units,
             dropout_rate=args.fc_dropout,
+            regularizer_const=args.regularizer_const,
             optimize_policy=bool(args.optimize_policy),
         )
     else:
@@ -103,6 +105,7 @@ if __name__ == "__main__":
         model = Model.get_model(
             input_shape=input_shape,
             conv_filters=conv_filters,
+            regularizer_const=args.regularizer_const,
             optimize_policy=bool(args.optimize_policy),
         )
 
