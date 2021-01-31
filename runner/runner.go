@@ -1,7 +1,6 @@
 package runner
 
 import (
-	"fmt"
 	"math"
 	"sync"
 
@@ -122,7 +121,6 @@ func PlayNGamesAsync(
 		result := <-resultsChan
 		results[i] = result
 		totalPositions += len(result.History)
-		fmt.Println(i)
 
 		if gamesRan < n {
 			newGame := newGameFactory()

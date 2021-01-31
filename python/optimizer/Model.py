@@ -92,7 +92,7 @@ def get_model(
     value_out = layers.Dense(1, activation='sigmoid', name='value_out')(value_out)
 
     policy_out = layers.Flatten()(model)
-    if optimizer_policy:
+    if optimize_policy:
         policy_out = layers.Dense(128, activation='relu')(policy_out)
         # policy_out = layers.Dropout(0.25)(policy_out)
     policy_out = layers.Dense(65, activation='softmax', name='policy_out')(policy_out)

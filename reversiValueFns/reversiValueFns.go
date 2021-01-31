@@ -54,6 +54,9 @@ func ReversiToOneHotBoard3(reversiGame *reversi.ReversiGame) game.Features {
 }
 
 func ReversiToOneHotBoardMoves(game *reversi.ReversiGame) game.Features {
+	emptyOneHot := []float32{1, 0, 0, 0}
+	whiteOneHot := []float32{0, 1, 0, 0}
+	blackOneHot := []float32{0, 0, 1, 0}
 	features := make([][][]float32, reversi.BOARD_SIZE)
 
 	for row := int8(0); row < reversi.BOARD_SIZE; row++ {
@@ -62,11 +65,11 @@ func ReversiToOneHotBoardMoves(game *reversi.ReversiGame) game.Features {
 		for col := int8(0); col < reversi.BOARD_SIZE; col++ {
 			field := game.Board[reversi.YXToField(row, col)]
 
-			oneHotField := []float32{0, 0, 0}
-			if field == -1 {
-				oneHotField = []float32{1, 0, 0}
-			} else if field == 1 {
-				oneHotField = []float32{0, 1, 0}
+			oneHotField := emptyOneHot
+			if field == reversi.WHITE {
+				oneHotField = whiteOneHot
+			} else if field == reversi.BLACK {
+				oneHotField = blackOneHot
 			}
 
 			features[row][col] = oneHotField
@@ -80,7 +83,7 @@ func ReversiToOneHotBoardMoves(game *reversi.ReversiGame) game.Features {
 		}
 
 		y, x := reversi.GetYX(move)
-		features[y][x][2] = 1
+		features[y][x][3] = 1
 	}
 
 	return features
