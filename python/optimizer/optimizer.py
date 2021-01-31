@@ -103,6 +103,7 @@ if __name__ == "__main__":
         model = Model.get_model(
             input_shape=input_shape,
             conv_filters=conv_filters,
+            optimize_policy=bool(args.optimize_policy),
         )
 
     loss_dict = {

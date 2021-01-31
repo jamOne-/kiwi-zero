@@ -72,6 +72,7 @@ def add_PolicyHead(model):
 def get_model(
     input_shape=(8, 8, 3),
     conv_filters=[32, 32, 64, 64],
+    optimize_policy=True
 ):
     inputs = layers.Input(shape=input_shape)
 
@@ -91,8 +92,9 @@ def get_model(
     value_out = layers.Dense(1, activation='sigmoid', name='value_out')(value_out)
 
     policy_out = layers.Flatten()(model)
-    policy_out = layers.Dense(128, activation='relu')(policy_out)
-    # policy_out = layers.Dropout(0.25)(policy_out)
+    if optimizer_policy:
+        policy_out = layers.Dense(128, activation='relu')(policy_out)
+        # policy_out = layers.Dropout(0.25)(policy_out)
     policy_out = layers.Dense(65, activation='softmax', name='policy_out')(policy_out)
     
     ret = models.Model(
