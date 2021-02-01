@@ -112,11 +112,9 @@ func Optimizer(
 				gamePositions = gamePositions[startIndex:]
 			}
 
-			for i := 0; i < FITS_PER_ITERATION; i++ {
-				positions = choosePositions(gamePositions, TRAINING_SET_SAME_GAMES_ALLOWED, TRAINING_SIZE)
-				params := positionsToTrainingParams(gameToFeaturesFn, positions)
-				trainingChan <- params
-			}
+			positions = choosePositions(gamePositions, TRAINING_SET_SAME_GAMES_ALLOWED, FITS_PER_ITERATION*TRAINING_SIZE)
+			params := positionsToTrainingParams(gameToFeaturesFn, positions)
+			trainingChan <- params
 
 			optimizerIteration += 1
 
@@ -239,7 +237,6 @@ func trainer(
 	optimizerOut io.ReadCloser,
 	newModelPathChan chan string,
 ) {
-	FITS_PER_ITERATION := viper.GetInt("OPTIMIZER_FITS_PER_ITERATION")
 	optimizerOutReader := bufio.NewReader(optimizerOut)
 	training_i := 1
 
@@ -282,12 +279,11 @@ func trainer(
 
 		// newWeightsString, _ := optimizerOutReader.ReadString('\n')
 		// newWeights := parseWeights(newWeightsString)
+
+		fmt.Printf("Optimizer (%d): %s", training_i, trainingSummary)
+		newModelPathChan <- newModelPath
 		training_i += 1
 
-		if training_i%FITS_PER_ITERATION == 0 {
-			fmt.Printf("Optimizer (%d): %s", training_i/FITS_PER_ITERATION, trainingSummary)
-			newModelPathChan <- newModelPath
-		}
 		// select {
 		// case newModelPathChan <- newModelPath:
 		// 	// try to send
