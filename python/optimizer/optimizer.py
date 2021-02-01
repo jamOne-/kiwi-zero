@@ -8,6 +8,7 @@ parser.add_argument('--logfile', default='optimizer_log.txt', type=str)
 parser.add_argument('--models_directory', type=str)
 
 parser.add_argument('--learning_rate', default=1e-3, type=float)
+parser.add_argument('--momentum', default=0.9, type=float)
 parser.add_argument('--epochs', default=1000, type=int)
 parser.add_argument('--batch_size', default=16, type=int)
 parser.add_argument('--regularizer_const', default=5e-4, type=float)
@@ -118,7 +119,10 @@ if __name__ == "__main__":
     loss_weights = {"value_out": 1.0, "policy_out": policy_weight}
 
     model.compile(
-        optimizer=tf.keras.optimizers.Adam(args.learning_rate),
+        optimizer=tf.keras.optimizers.SGD(
+            learning_rate=args.learning_rate,
+            momentum=args.momentum,
+        ),
         loss=loss_dict,
         loss_weights=loss_weights,
         metrics=['accuracy']

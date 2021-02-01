@@ -44,7 +44,9 @@ func Optimizer(
 ) {
 	MAX_HISTORY_LENGTH := viper.GetInt("OPTIMIZER_MAX_HISTORY_LENGTH")
 	MAX_POSITIONS_FROM_BATCH := viper.GetInt("OPTIMIZER_MAX_POSITIONS_FROM_BATCH")
+	FITS_PER_ITERATION := viper.GetInt("OPTIMIZER_FITS_PER_ITERATION")
 	TRAINING_SIZE := viper.GetInt("OPTIMIZER_TRAINING_SIZE")
+	TRAINING_SET_SAME_GAMES_ALLOWED := viper.GetBool("OPTIMIZER_TRAINING_SET_SAME_GAMES_ALLOWED")
 	FLIP_POSITIONS_PROB := viper.GetFloat64("OPTIMIZER_FLIP_POSITIONS_PROB")
 	// TRAINING_TRANSFORM_POSITIONS := viper.GetBool("TRAINING_TRANSFORM_POSITIONS")
 
@@ -59,6 +61,7 @@ func Optimizer(
 		"--models_directory", modelsDirPath,
 		"--input_shape", reversiValueFns.FEATURES_FN_TO_SHAPE_DICT[viper.GetString("GAME_TO_FEATURES_FN")],
 		"--learning_rate", fmt.Sprintf("%f", viper.GetFloat64("OPTIMIZER_LEARNING_RATE")),
+		"--momentum", fmt.Sprintf("%f", viper.GetFloat64("OPTIMIZER_MOMENTUM")),
 		"--epochs", strconv.Itoa(viper.GetInt("OPTIMIZER_MAX_EPOCHS")),
 		"--batch_size", strconv.Itoa(viper.GetInt("OPTIMIZER_BATCH_SIZE")),
 		"--regularizer_const", fmt.Sprintf("%f", viper.GetFloat64("OPTIMIZER_REGULARIZER_CONST")),
@@ -98,7 +101,10 @@ func Optimizer(
 				flipPositionsColors(FLIP_POSITIONS_PROB, positions)
 			}
 
-			positions = choosePositions(positions, true, MAX_POSITIONS_FROM_BATCH*len(results))
+			if MAX_POSITIONS_FROM_BATCH != -1 {
+				positions = choosePositions(positions, true, MAX_POSITIONS_FROM_BATCH*len(results))
+			}
+
 			gamePositions = append(gamePositions, positions...)
 
 			if len(gamePositions) > MAX_HISTORY_LENGTH {
@@ -106,10 +112,12 @@ func Optimizer(
 				gamePositions = gamePositions[startIndex:]
 			}
 
-			positions = choosePositions(gamePositions, false, TRAINING_SIZE)
-			params := positionsToTrainingParams(gameToFeaturesFn, positions)
+			for i := 0; i < FITS_PER_ITERATION; i++ {
+				positions = choosePositions(gamePositions, TRAINING_SET_SAME_GAMES_ALLOWED, TRAINING_SIZE)
+				params := positionsToTrainingParams(gameToFeaturesFn, positions)
+				trainingChan <- params
+			}
 
-			trainingChan <- params
 			optimizerIteration += 1
 
 			// select {
@@ -231,6 +239,7 @@ func trainer(
 	optimizerOut io.ReadCloser,
 	newModelPathChan chan string,
 ) {
+	FITS_PER_ITERATION := viper.GetInt("OPTIMIZER_FITS_PER_ITERATION")
 	optimizerOutReader := bufio.NewReader(optimizerOut)
 	training_i := 1
 
@@ -273,10 +282,12 @@ func trainer(
 
 		// newWeightsString, _ := optimizerOutReader.ReadString('\n')
 		// newWeights := parseWeights(newWeightsString)
-		fmt.Printf("Optimizer (%d): %s", training_i, trainingSummary)
 		training_i += 1
 
-		newModelPathChan <- newModelPath
+		if training_i%FITS_PER_ITERATION == 0 {
+			fmt.Printf("Optimizer (%d): %s", training_i/FITS_PER_ITERATION, trainingSummary)
+			newModelPathChan <- newModelPath
+		}
 		// select {
 		// case newModelPathChan <- newModelPath:
 		// 	// try to send

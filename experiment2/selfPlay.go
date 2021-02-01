@@ -38,7 +38,7 @@ func SelfPlayLoop(
 
 			// default:
 			gamesCount := GAMES_PER_ITERATION
-			if selfPlay_i == 1 {
+			if selfPlay_i == 1 && !viper.GetBool("OPTIMIZER_TRAINING_SET_SAME_GAMES_ALLOWED") {
 				gamesCount = GAMES_PER_ITERATION * int(2+math.Ceil(viper.GetFloat64("OPTIMIZER_TRAINING_SIZE")/float64(GAMES_PER_ITERATION)))
 			}
 
