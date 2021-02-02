@@ -20,6 +20,10 @@ func NewTFPredictor(path string) *TFPredictor {
 	return &TFPredictor{model, path}
 }
 
+func (predictor *TFPredictor) GetId() string {
+	return predictor.path
+}
+
 func (predictor *TFPredictor) PredictValue(features predictor.Features) float32 {
 	model := predictor.model
 	inputTensor, err := tf.NewTensor([1][][][]float32{features})

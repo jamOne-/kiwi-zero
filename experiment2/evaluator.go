@@ -36,6 +36,7 @@ func Evaluator(
 	// bestPlayer := minMaxPlayer.NewMinMaxPlayer(MINMAX_DEPTH, initialValueFn)
 	bestPlayer := evaluatorPlayerFactory(initialPredictor)
 	bestPlayersPool := []player.Player{bestPlayer}
+	bestPredictor := initialPredictor
 
 	evaluator_i := 1
 
@@ -56,6 +57,7 @@ func Evaluator(
 
 			bestPlayer = newPlayer
 			bestPlayersPool = append(bestPlayersPool, bestPlayer)
+			bestPredictor = newPredictor
 
 			if len(bestPlayersPool) > MAX_BEST_PLAYERS_POOL_LENGTH {
 				bestPlayersPool = bestPlayersPool[len(bestPlayersPool)-MAX_BEST_PLAYERS_POOL_LENGTH:]
@@ -73,6 +75,7 @@ func Evaluator(
 				playersToCompareWith,
 				gameFactory,
 				bestPlayer,
+				bestPredictor,
 			)
 		}
 
@@ -100,30 +103,34 @@ func comparePlayersAndSaveResults(
 }
 
 func evaluatorCheckpoint(
-	bestPlayer_i int,
+	evaluator_i int,
 	resultsDirPath string,
 	playersToCompareWith []*PlayerToCompare,
 	gameFactory runner.NewGameFactory,
 	bestPlayer player.Player,
+	bestPredictor predictor.Predictor,
 ) {
 	COMPARE_AT_CHECKPOINTS := viper.GetBool("COMPARE_AT_CHECKPOINTS")
 	COMPARE_AT_CHECKPOINTS_GAMES := viper.GetInt("COMPARE_AT_CHECKPOINTS_GAMES")
 	EVALUATOR_GAMES_AT_ONCE := viper.GetInt("EVALUATOR_GAMES_AT_ONCE")
 
-	bestPlayer_iString := strconv.Itoa(bestPlayer_i)
-	// checkpointWeightsPath := path.Join(resultsDirPath, bestPlayer_iString+"_weights.txt")
+	evaluator_iString := strconv.Itoa(evaluator_i)
+	// checkpointWeightsPath := path.Join(resultsDirPath, evaluator_iString+"_weights.txt")
 
 	// reversiValueFns.SaveWeightsToFile(newWeights, checkpointWeightsPath)
 
 	if COMPARE_AT_CHECKPOINTS {
-		resultsPath := path.Join(resultsDirPath, bestPlayer_iString+"_results.txt")
+		resultsPath := path.Join(resultsDirPath, evaluator_iString+"_results.txt")
+		resultsFile, _ := os.OpenFile(resultsPath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+		fmt.Fprintf(resultsFile, "Predictor id (version=%d): %s\n", evaluator_i, bestPredictor.GetId())
+		resultsFile.Close()
 
 		for _, playerToCompareWith := range playersToCompareWith {
 			comparePlayersAndSaveResults(
 				resultsPath,
 				gameFactory,
 				bestPlayer,
-				fmt.Sprintf("Reinforced (version=%d)", bestPlayer_i),
+				fmt.Sprintf("Reinforced (version=%d)", evaluator_i),
 				playerToCompareWith.player,
 				playerToCompareWith.name,
 				COMPARE_AT_CHECKPOINTS_GAMES,

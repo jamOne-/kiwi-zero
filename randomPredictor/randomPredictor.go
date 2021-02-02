@@ -12,6 +12,10 @@ func NewRandomPredictor() *RandomPredictor {
 	return &RandomPredictor{}
 }
 
+func (predictor *RandomPredictor) GetId() string {
+	return "Random predictor =)"
+}
+
 func (predictor *RandomPredictor) PredictValue(features predictor.Features) float32 {
 	return 0.5
 }
