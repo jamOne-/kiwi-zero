@@ -38,7 +38,7 @@ func SoftMax32(xs []float32) []float32 {
 	sum := float32(0)
 
 	for i, x := range xs {
-		result[i] = float32(math.Exp(float64(x)))
+		result[i] = float32(math.Exp(float64(x * 10)))
 		sum += result[i]
 	}
 
