@@ -57,7 +57,7 @@ func SelfPlayLoop(
 				SELFPLAY_GAMES_AT_ONCE,
 			)
 
-			fmt.Printf("Selfplay (%d): finished %d games\n", selfPlay_i, gamesCount)
+			fmt.Printf("Selfplay (%d): finished %d games\n", selfPlay_i, len(results))
 
 			selfPlay_i += 1
 			resultsBatch := &runner.GameResultsBatch{Results: results, TotalPositions: totalPositions}

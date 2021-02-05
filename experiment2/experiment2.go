@@ -108,9 +108,9 @@ func main() {
 	bestPredictorsChan := make(chan predictor.Predictor)
 	newPredictorsChan := make(chan predictor.Predictor)
 
-	go SelfPlayLoop(bestPredictorsChan, gameResultsChan, reversiGameFactory, initialPredictor, selfPlayPlayerFactory, selfPlayTeacherFactory)
+	go SelfPlayLoop(bestPredictorsChan, gameResultsChan, randomStartReversiGameFactory, initialPredictor, selfPlayPlayerFactory, selfPlayTeacherFactory)
 	go Optimizer(gameResultsChan, newPredictorsChan, gameToFeaturesFn, resultsDirPath)
-	go Evaluator(newPredictorsChan, bestPredictorsChan, reversiGameFactory, initialPredictor, evaluatorPlayerFactory, playersToCompareWith, resultsDirPath)
+	go Evaluator(newPredictorsChan, bestPredictorsChan, randomStartReversiGameFactory, initialPredictor, evaluatorPlayerFactory, playersToCompareWith, resultsDirPath)
 	// bestValueFnsChan <- initialValueFn
 	bestPredictorsChan <- initialPredictor
 
@@ -133,6 +133,18 @@ func main() {
 
 func reversiGameFactory() game.Game {
 	return reversi.NewReversiGame()
+}
+
+func randomStartReversiGameFactory() game.Game {
+	g := reversi.NewReversiGame()
+	NUMBER_OF_RANDOM_MOVES := 4
+
+	for i := 0; i < NUMBER_OF_RANDOM_MOVES; i += 1 {
+		g.MakeMove(randomPlayer.SelectRandomMoveDifferentThan(g, reversi.PASS_MOVE))
+		g.MakeMove(randomPlayer.SelectRandomMoveDifferentThan(g, reversi.PASS_MOVE))
+	}
+
+	return g
 }
 
 func createResultsDir(resultsDirName string) string {

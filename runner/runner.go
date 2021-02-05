@@ -97,6 +97,21 @@ func PlayNGames(
 	return results, totalPositions
 }
 
+func PlayTwoGamesAsync(
+	newGameFactory NewGameFactory,
+	saveHistory bool,
+	player1Factory NewPlayerFactory,
+	player2Factory NewPlayerFactory,
+	blackResultsChan chan *GameResult,
+	whiteResultsChan chan *GameResult,
+) {
+	newGame1 := newGameFactory()
+	newGame2 := newGame1.Copy()
+
+	go PlayGameAsyncWrapper(newGame1, player1Factory(), player2Factory(), saveHistory, blackResultsChan, nil)
+	go PlayGameAsyncWrapper(newGame2, player2Factory(), player1Factory(), saveHistory, whiteResultsChan, nil)
+}
+
 func PlayNGamesAsync(
 	newGameFactory NewGameFactory,
 	saveHistory bool,
@@ -108,9 +123,8 @@ func PlayNGamesAsync(
 	resultsChan := make(chan *GameResult, n)
 	maxGamesAtOnce = int(math.Min(float64(n), float64(maxGamesAtOnce)))
 
-	for i := 0; i < maxGamesAtOnce; i++ {
-		newGame := newGameFactory()
-		go PlayGameAsyncWrapper(newGame, player1Factory(), player2Factory(), saveHistory, resultsChan, nil)
+	for i := 0; i < maxGamesAtOnce/2; i++ {
+		PlayTwoGamesAsync(newGameFactory, saveHistory, player1Factory, player2Factory, resultsChan, resultsChan)
 	}
 
 	gamesRan := maxGamesAtOnce
@@ -122,10 +136,9 @@ func PlayNGamesAsync(
 		results[i] = result
 		totalPositions += len(result.History)
 
-		if gamesRan < n {
-			newGame := newGameFactory()
-			go PlayGameAsyncWrapper(newGame, player1Factory(), player2Factory(), saveHistory, resultsChan, nil)
-			gamesRan += 1
+		if gamesRan < n-1 {
+			PlayTwoGamesAsync(newGameFactory, saveHistory, player1Factory, player2Factory, resultsChan, resultsChan)
+			gamesRan += 2
 		}
 	}
 
@@ -214,28 +227,34 @@ func ComparePlayerWithOthersAsync(
 	players []player.Player,
 	numberOfGames int,
 	maxGamesAtOnce int,
-) int {
+) (int, int) {
 	playerFactory := FactorizePlayer(player)
-	numberOfPlayers := len(players)
+	asBlackResultsChan := make(chan *GameResult, 2)
+	asWhiteResultsChan := make(chan *GameResult, 2)
 
-	// TODO: find a better way
-	maxGamesPerPlayer := maxGamesAtOnce / numberOfPlayers
-	if maxGamesPerPlayer == 0 {
-		maxGamesPerPlayer = 1
-	}
-
-	gamesPerPlayer := numberOfGames / numberOfPlayers
-
-	gamesLeft := numberOfGames
+	gamesPlayed := 0
 	playerWins := 0
+	opponent_i := 0
 
-	for _, opponent := range players {
-		// gamesToPlay := gamesLeft / (numberOfPlayers - i)
-		opponentFactory := FactorizePlayer(opponent)
-		playerWins += ComparePlayersAsync(gameFactory, playerFactory, opponentFactory, gamesPerPlayer, maxGamesPerPlayer)
+	for gamesPlayed < numberOfGames {
+		opponentFactory := FactorizePlayer(players[opponent_i])
 
-		gamesLeft -= gamesPerPlayer
+		PlayTwoGamesAsync(gameFactory, false, playerFactory, opponentFactory, asBlackResultsChan, asWhiteResultsChan)
+
+		asBlackResult := <-asBlackResultsChan
+		asWhiteResult := <-asWhiteResultsChan
+
+		if asBlackResult.Winner == game.BLACK {
+			playerWins += 1
+		}
+
+		if asWhiteResult.Winner == game.WHITE {
+			playerWins += 1
+		}
+
+		opponent_i = (opponent_i + 1) % len(players)
+		gamesPlayed += 2
 	}
 
-	return playerWins
+	return playerWins, gamesPlayed
 }

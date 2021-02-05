@@ -48,11 +48,11 @@ func Evaluator(
 		// newPlayer := minMaxPlayer.NewMinMaxPlayer(MINMAX_DEPTH, newPredictor)
 		newPlayer := evaluatorPlayerFactory(newPredictor)
 		// newPlayerWins := runner.ComparePlayersAsync(gameFactory, newPlayer, bestPlayer, EVALUATOR_GAMES, EVALUATOR_GAMES_AT_ONCE)
-		newPlayerWins := runner.ComparePlayerWithOthersAsync(gameFactory, newPlayer, bestPlayersPool, EVALUATOR_GAMES, EVALUATOR_GAMES_AT_ONCE)
+		newPlayerWins, gamesPlayed := runner.ComparePlayerWithOthersAsync(gameFactory, newPlayer, bestPlayersPool, EVALUATOR_GAMES, EVALUATOR_GAMES_AT_ONCE)
 
-		fmt.Printf("Evaluator (%d): New candidate won %d/%d games\n", evaluator_i, newPlayerWins, EVALUATOR_GAMES)
+		fmt.Printf("Evaluator (%d): New candidate won %d/%d games\n", evaluator_i, newPlayerWins, gamesPlayed)
 
-		if float64(newPlayerWins)/float64(EVALUATOR_GAMES) >= 0.6 {
+		if float64(newPlayerWins)/float64(gamesPlayed) >= 0.6 {
 			fmt.Printf("Evaluator (%d): 🎉 New candidate is the new best player 🎉\n", evaluator_i)
 
 			bestPlayer = newPlayer
@@ -96,8 +96,8 @@ func comparePlayersAndSaveResults(
 	resultsFile, _ := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	defer resultsFile.Close()
 
-	player1Wins := runner.ComparePlayersAsync(gameFactory, runner.FactorizePlayer(player1), runner.FactorizePlayer(player2), numberOfGames, maxGamesAtOnce)
-	resultsInfo := fmt.Sprintf("%s won %d/%d games versus %s\n", player1Name, player1Wins, numberOfGames, player2Name)
+	player1Wins, gamesPlayed := runner.ComparePlayerWithOthersAsync(gameFactory, player1, []player.Player{player2}, numberOfGames, maxGamesAtOnce)
+	resultsInfo := fmt.Sprintf("%s won %d/%d games versus %s\n", player1Name, player1Wins, gamesPlayed, player2Name)
 	fmt.Print(resultsInfo)
 	fmt.Fprint(resultsFile, resultsInfo)
 }
