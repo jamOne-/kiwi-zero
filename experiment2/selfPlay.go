@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"math"
 
+	"github.com/jamOne-/kiwi-zero/game"
 	"github.com/jamOne-/kiwi-zero/player"
 	"github.com/jamOne-/kiwi-zero/predictor"
+	"github.com/jamOne-/kiwi-zero/utils"
 
 	"github.com/jamOne-/kiwi-zero/runner"
 	"github.com/spf13/viper"
@@ -48,7 +50,7 @@ func SelfPlayLoop(
 				opponentFactory = teacherFactory
 			}
 
-			results, totalPositions := runner.PlayNGamesAsync(
+			selfPlayWins, results, totalPositions := runner.PlayNGamesAsync(
 				gameFactory,
 				/* saveHistory */ true,
 				selfPlayRunnerFactory,
@@ -57,7 +59,21 @@ func SelfPlayLoop(
 				SELFPLAY_GAMES_AT_ONCE,
 			)
 
-			fmt.Printf("Selfplay (%d): finished %d games\n", selfPlay_i, len(results))
+			blackWins := 0
+			whiteWins := 0
+			for _, result := range results {
+				blackWins += utils.BoolToInt(result.Winner == game.BLACK)
+				whiteWins += utils.BoolToInt(result.Winner == game.WHITE)
+			}
+
+			if teacherFactory != nil {
+				fmt.Printf("Selfplay (%d): student won %d/%d games\n", selfPlay_i, selfPlayWins, len(results))
+
+			} else {
+				fmt.Printf("Selfplay (%d): finished %d games\n", selfPlay_i, len(results))
+			}
+
+			fmt.Printf("Selfplay (%d): there were %d black wins and %d white wins\n", selfPlay_i, blackWins, whiteWins)
 
 			selfPlay_i += 1
 			resultsBatch := &runner.GameResultsBatch{Results: results, TotalPositions: totalPositions}

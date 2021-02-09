@@ -3,7 +3,6 @@ package monteCarloTreeSearchPlayer
 import (
 	"math"
 	"math/rand"
-	"time"
 
 	"github.com/jamOne-/kiwi-zero/game"
 	rp "github.com/jamOne-/kiwi-zero/randomPlayer"
@@ -24,7 +23,6 @@ type Node struct {
 }
 
 func NewMonteCarloTreeSearchPlayer(maxSimulations int) *MonteCarloTreeSearchPlayer {
-	rand.Seed(time.Now().UnixNano())
 	return &MonteCarloTreeSearchPlayer{maxSimulations}
 }
 

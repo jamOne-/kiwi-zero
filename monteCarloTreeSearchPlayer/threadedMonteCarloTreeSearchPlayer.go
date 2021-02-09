@@ -3,7 +3,6 @@ package monteCarloTreeSearchPlayer
 import (
 	"math/rand"
 	"sync"
-	"time"
 
 	"github.com/jamOne-/kiwi-zero/game"
 )
@@ -14,7 +13,6 @@ type ThreadedMonteCarloTreeSearchPlayer struct {
 }
 
 func NewThreadedMonteCarloTreeSearchPlayer(maxSimulations int, maxParallelGames int) *ThreadedMonteCarloTreeSearchPlayer {
-	rand.Seed(time.Now().UnixNano())
 	return &ThreadedMonteCarloTreeSearchPlayer{maxSimulations, maxParallelGames}
 }
 
