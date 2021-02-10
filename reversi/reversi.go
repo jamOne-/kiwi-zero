@@ -76,12 +76,15 @@ func (reversiGame *ReversiGame) MakeMove(move game.Move) (bool, game.PlayerColor
 
 func (reversiGame *ReversiGame) GetPossibleMoves() []game.Move {
 	result := make([]game.Field, 0)
-	result = append(result, PASS_MOVE)
 
 	for field := int8(0); field < TOTAL_SIZE; field++ {
 		if reversiGame.Board[field] == EMPTY && len(getKilledPawns(reversiGame.Board, field, reversiGame.Turn)) > 0 {
 			result = append(result, field)
 		}
+	}
+
+	if len(result) == 0 {
+		result = append(result, PASS_MOVE)
 	}
 
 	return result
@@ -113,7 +116,7 @@ func (reversiGame *ReversiGame) IsGameFinished() (bool, game.PlayerColor) {
 	if turns < 2 || reversiGame.History[turns-2].Move != PASS_MOVE || reversiGame.History[turns-1].Move != PASS_MOVE {
 		currentPlayerMoves := reversiGame.GetPossibleMoves()
 
-		if len(currentPlayerMoves) > 1 {
+		if currentPlayerMoves[0] != PASS_MOVE {
 			return false, EMPTY
 		}
 
@@ -121,7 +124,7 @@ func (reversiGame *ReversiGame) IsGameFinished() (bool, game.PlayerColor) {
 		nextPlayerMoves := reversiGame.GetPossibleMoves()
 		reversiGame.Turn *= -1
 
-		if len(nextPlayerMoves) > 1 {
+		if nextPlayerMoves[0] != PASS_MOVE {
 			return false, EMPTY
 		}
 	}
