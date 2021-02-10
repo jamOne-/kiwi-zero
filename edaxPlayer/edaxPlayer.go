@@ -48,9 +48,9 @@ func NewEdaxPlayer(
 
 func (player *EdaxPlayer) SelectMove(g game.Game) game.Move {
 	// Edax can't handle positions without move possibilities
-	possibilities := len(g.GetPossibleMoves())
-	if possibilities == 1 {
-		return reversi.PASS_MOVE
+	possibilities := g.GetPossibleMoves()
+	if len(possibilities) == 1 {
+		return possibilities[0]
 	}
 
 	reversiGame := g.(*reversi.ReversiGame)
