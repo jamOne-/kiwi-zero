@@ -61,7 +61,8 @@ func getPlayerFactory(
 		simulations := viper.GetInt(prefix + "MCTS_SIMULATIONS")
 		rolloutDepth := viper.GetInt(prefix + "MCTS_ROLLOUT_DEPTH")
 		policyRolloutPlayer := viper.GetBool(prefix + "MCTS_POLICY_ROLLOUT_PLAYER")
-		return getMCTSFactory(gameToFeaturesFn, simulations, rolloutDepth, policyRolloutPlayer)
+		optimizePolicy := viper.GetBool("OPTIMIZER_OPTIMIZE_POLICY")
+		return getMCTSFactory(gameToFeaturesFn, simulations, rolloutDepth, policyRolloutPlayer, optimizePolicy)
 	}
 
 	return nil
@@ -193,10 +194,14 @@ func getEpsilonGreedyMinMaxFactory(gameToFeatures game.GameToFeaturesFn, depth i
 	}
 }
 
-func getMCTSFactory(gameToFeatures game.GameToFeaturesFn, maxSimulations int, rolloutDepth int, policyRolloutPlayer bool) player.PlayerFactory {
+func getMCTSFactory(gameToFeatures game.GameToFeaturesFn, maxSimulations int, rolloutDepth int, policyRolloutPlayer bool, optimizePolicy bool) player.PlayerFactory {
 	return func(pred predictor.Predictor) player.Player {
 		valueFn := reversiValueFns.CreateMinMaxValueFn(gameToFeatures, pred)
-		valueAndPolicyFn := predictor.CreateValueAndPolicyFn(gameToFeatures, pred)
+
+		var valueAndPolicyFn monteCarloTreeSearchPlayer.ValueAndPolicyFn = nil
+		if optimizePolicy {
+			valueAndPolicyFn = predictor.CreateValueAndPolicyFn(gameToFeatures, pred)
+		}
 
 		var rolloutPlayer player.Player = randomPlayer.NewRandomPlayer()
 		if policyRolloutPlayer {
