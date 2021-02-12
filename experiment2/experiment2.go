@@ -194,16 +194,25 @@ func getEpsilonGreedyMinMaxFactory(gameToFeatures game.GameToFeaturesFn, depth i
 }
 
 func getMCTSFactory(gameToFeatures game.GameToFeaturesFn, maxSimulations int, rolloutDepth int, policyRolloutPlayer bool) player.PlayerFactory {
-	return func(predictor predictor.Predictor) player.Player {
-		valueFn := reversiValueFns.CreateMinMaxValueFn(gameToFeatures, predictor)
+	return func(pred predictor.Predictor) player.Player {
+		valueFn := reversiValueFns.CreateMinMaxValueFn(gameToFeatures, pred)
+		valueAndPolicyFn := predictor.CreateValueAndPolicyFn(gameToFeatures, pred)
 
 		var rolloutPlayer player.Player = randomPlayer.NewRandomPlayer()
 		if policyRolloutPlayer {
-			distributionFn := policyPlayer.GameToDistributionFnFromPredictor(gameToFeatures, predictor)
+			distributionFn := policyPlayer.GameToDistributionFnFromPredictor(gameToFeatures, pred)
 			rolloutPlayer = policyPlayer.NewPolicyPlayer(distributionFn)
 		}
 
-		return monteCarloTreeSearchPlayer.NewGeneralMCTSPlayer(maxSimulations, rolloutDepth, rolloutPlayer, valueFn)
+		return monteCarloTreeSearchPlayer.NewGeneralMCTSPlayer(
+			maxSimulations,
+			2.0,
+			rolloutDepth,
+			rolloutPlayer,
+			valueFn,
+			valueAndPolicyFn,
+			nil,
+		)
 	}
 }
 

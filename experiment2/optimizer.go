@@ -26,14 +26,14 @@ import (
 type GamePosition struct {
 	gameId   string
 	position game.Game
-	move     game.Move
+	policy   []float32
 	winner   float64
 }
 
 type trainingParams struct {
-	Xs    []game.Features
-	ys    []float64
-	moves []game.Move
+	Xs       []game.Features
+	ys       []float64
+	policies [][]float32
 }
 
 func Optimizer(
@@ -150,15 +150,15 @@ func choosePositions(positions []*GamePosition, sameGameAllowed bool, N int) []*
 func positionsToTrainingParams(gameToFeaturesFn game.GameToFeaturesFn, positions []*GamePosition) *trainingParams {
 	Xs := make([]game.Features, len(positions))
 	ys := make([]float64, len(positions))
-	moves := make([]game.Move, len(positions))
+	policies := make([][]float32, len(positions))
 
 	for i, position := range positions {
 		Xs[i] = gameToFeaturesFn(position.position)
 		ys[i] = (position.winner + 1) / 2
-		moves[i] = position.move
+		policies[i] = position.policy
 	}
 
-	return &trainingParams{Xs, ys, moves}
+	return &trainingParams{Xs, ys, policies}
 }
 
 func splitResults(results []*runner.GameResult, totalPositions int, iteration int) []*GamePosition {
@@ -170,10 +170,10 @@ func splitResults(results []*runner.GameResult, totalPositions int, iteration in
 
 		for _, tuple := range result.History {
 			game := tuple.Game
-			move := tuple.Move
+			policy := tuple.Policy
 			id := fmt.Sprintf("%d-%d", iteration, gameIndex)
 
-			gamePositions[index] = &GamePosition{id, game, move, winner}
+			gamePositions[index] = &GamePosition{id, game, policy, winner}
 			index += 1
 		}
 	}
@@ -241,7 +241,7 @@ func trainer(
 	training_i := 1
 
 	for params := range paramsChan {
-		Xs, ys, moves := params.Xs, params.ys, params.moves
+		Xs, ys, policies := params.Xs, params.ys, params.policies
 		Xs_shape := [4]int{len(Xs), len(Xs[0]), len(Xs[0][0]), len(Xs[0][0][0])}
 
 		optimizerIn.Write([]byte(fmt.Sprintf("%v %v %v %v\n", Xs_shape[0], Xs_shape[1], Xs_shape[2], Xs_shape[3])))
@@ -260,8 +260,8 @@ func trainer(
 			optimizerIn.Write([]byte(line))
 		}
 
-		for _, move := range moves {
-			line := utils.FloatsToString(reversi.GameMoveToPolicy(move)) + "\n"
+		for _, policy := range policies {
+			line := utils.FloatsToString(policy) + "\n"
 			optimizerIn.Write([]byte(line))
 		}
 

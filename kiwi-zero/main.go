@@ -3,30 +3,34 @@ package main
 import (
 	"fmt"
 	"math"
+	"math/rand"
 	"sort"
 	"time"
 
 	"github.com/jamOne-/kiwi-zero/monteCarloTreeSearchPlayer"
+
 	"github.com/jamOne-/kiwi-zero/randomPlayer"
 
-	tfpredictor "github.com/jamOne-/kiwi-zero/TFPredictor"
 	"github.com/jamOne-/kiwi-zero/edaxPlayer"
-	"github.com/jamOne-/kiwi-zero/reversiValueFns"
 
 	"github.com/jamOne-/kiwi-zero/game"
 	"github.com/jamOne-/kiwi-zero/reversi"
 )
 
-func getInitialValueFn() game.ValueFn {
-	return func(game game.Game) float64 {
-		return 0.5
-	}
+func NeutralValueFunction(game game.Game) float64 {
+	return 0
+}
+
+func ReversiTempFn(turn int) float64 {
+	return -0.05 + 1.3*math.Exp(-0.11*float64(turn))
 }
 
 func main() {
+	rand.Seed(time.Now().UnixNano())
+
 	totalScore := 0
 	times1, times2 := make([]time.Duration, 0), make([]time.Duration, 0)
-	NUMBER_OF_GAMES := 20
+	NUMBER_OF_GAMES := 10
 
 	// 1 layer:
 	// tfpredictor := tfpredictor.NewTFPredictor("../experiment2/results/2020-11-04-211132/models/150")
@@ -38,28 +42,42 @@ func main() {
 	// tfpredictor := tfpredictor.NewTFPredictor("../experiment2/results/2020-12-07-222844/models/250")
 	// gameToFeaturesFn := reversiValueFns.ConvertReversiFnToGeneralFeatuersFn(reversiValueFns.ReversiToOneHotBoardMoves)
 	//
-	tfpredictor := tfpredictor.NewTFPredictor("../experiment2/results/2021-01-23-205906/models/2525")
-	gameToFeaturesFn := reversiValueFns.ConvertReversiFnToGeneralFeatuersFn(reversiValueFns.ReversiToFeaturesExtended)
+	// tfpredictor := tfpredictor.NewTFPredictor("../experiment2/results/2021-01-23-205906/models/2525")
+	// gameToFeaturesFn := reversiValueFns.ConvertReversiFnToGeneralFeatuersFn(reversiValueFns.ReversiToFeaturesExtended)
 
-	// gameToDistributionFn := policyPlayer.GameToDistributionFnFromTfPredictor(gameToFeaturesFn, tfpredictor)
+	// tfpredictor := tfpredictor.NewTFPredictor("../experiment2/results/2021-02-02-204309/models/150")
+	// gameToFeaturesFn := reversiValueFns.ConvertReversiFnToGeneralFeatuersFn(reversiValueFns.ReversiToOneHotBoardMoves)
 
-	valueFn := reversiValueFns.CreateMinMaxValueFn(gameToFeaturesFn, tfpredictor)
+	// gameToDistributionFn := policyPlayer.GameToDistributionFnFromPredictor(gameToFeaturesFn, tfpredictor)
+
+	// valueFn := reversiValueFns.CreateMinMaxValueFn(gameToFeaturesFn, tfpredictor)
 
 	for gameNumber := 0; gameNumber < NUMBER_OF_GAMES; gameNumber += 1 {
 		g := reversi.NewReversiGame()
 		// player1 := humanPlayer.NewHumanPlayer()
-		// player2 := monteCarloTreeSearchPlayer.NewThreadedMonteCarloTreeSearchPlayer(1000, 1)
+		// player2 := monteCarloTreeSearchPlayer.NewThreadedMonteCarloTreeSearchPlayer(500, 1)
 		// player2 := randomPlayer.NewRandomPlayer()
 		// player1 := policyPlayer.NewPolicyPlayer(gameToDistributionFn)
 		// player2 := minMaxPlayer.NewPredictorMinMaxPlayer(4)
 		// player2 := minMaxPlayer.NewMinMaxPlayer(7)
 		// player2 := randomPlayer.NewRandomPlayer()
-		player1 := monteCarloTreeSearchPlayer.NewGeneralMCTSPlayer(2000, 99, randomPlayer.NewRandomPlayer(), valueFn)
+		// player2 := monteCarloTreeSearchPlayer.NewGeneralMCTSPlayer(2000, 99, randomPlayer.NewRandomPlayer(), valueFn)
 
 		// player1 := minMaxPlayer.NewMinMaxPlayer(4, valueFn)
+		player1 := monteCarloTreeSearchPlayer.NewGeneralMCTSPlayer(
+			100,
+			2.0,
+			99,
+			randomPlayer.NewRandomPlayer(),
+			NeutralValueFunction,
+			nil,
+			ReversiTempFn,
+		)
+		player2 := monteCarloTreeSearchPlayer.NewMonteCarloTreeSearchPlayer(100)
+		// player1 := monteCarloTreeSearchPlayer.NewLazyExpandMonteCarloTreeSearchPlayer(1000)
 		edax := edaxPlayer.NewEdaxPlayer(-64, 64, 1, 100)
 		random := randomPlayer.NewRandomPlayer()
-		player2 := edax
+		// player2 := edax
 
 		// g.DrawBoard()
 		// fmt.Println("")
@@ -77,12 +95,17 @@ func main() {
 			start := time.Now()
 
 			if g.Turn > 0 {
+				// var policy []float32
+				// move, policy = player1.SelectMoveWithPolicy(g)
 				move = player1.SelectMove(g)
 				times1 = append(times1, time.Since(start))
+				// fmt.Println(policy)
 			} else {
 				move = player2.SelectMove(g)
 				times2 = append(times2, time.Since(start))
 			}
+
+			// g.DrawBoard()
 
 			// fmt.Printf("player %d was thinking for %s\n", (-g.Turn+1)/2+1, time.Since(start))
 			// fmt.Println(move)

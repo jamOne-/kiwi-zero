@@ -35,27 +35,27 @@ func initConfig() {
 	viper.SetDefault("OPTIMIZER_TRAINING_SET_SAME_GAMES_ALLOWED", true)
 	viper.SetDefault("OPTIMIZER_MAX_POSITIONS_FROM_BATCH", -1)
 	viper.SetDefault("OPTIMIZER_MAX_HISTORY_LENGTH", 150000)
-	viper.SetDefault("OPTIMIZER_OPTIMIZE_POLICY", false)
+	viper.SetDefault("OPTIMIZER_OPTIMIZE_POLICY", true)
 
 	viper.SetDefault("OPTIMIZER_FULLY_CONNECTED", false)
 	viper.SetDefault("OPTIMIZER_FC_LAYERS_COUNT", 1)
 	viper.SetDefault("OPTIMIZER_FC_LAYER_UNITS", 64)
 	viper.SetDefault("OPTIMIZER_FC_DROPOUT", 0.5)
 
-	viper.SetDefault("OPTIMIZER_CONV_FILTERS", "[32,32]")
+	viper.SetDefault("OPTIMIZER_CONV_FILTERS", "[64,64]")
 
-	viper.SetDefault("SELFPLAY_EDAX_DEPTH", 10)
+	viper.SetDefault("SELFPLAY_EDAX_DEPTH", 1)
 	viper.SetDefault("SELFPLAY_TEACHER", false)
 
-	viper.SetDefault("SELFPLAY_PLAYER_TYPE", "minmax-e") // minmax | minmax-e | minmax-sm | mcts-pred
+	viper.SetDefault("SELFPLAY_PLAYER_TYPE", "mcts-pred") // minmax | minmax-e | minmax-sm | mcts-pred
 	viper.SetDefault("SELFPLAY_MINMAX_DEPTH", "3")
-	viper.SetDefault("SELFPLAY_MCTS_SIMULATIONS", "500")
-	viper.SetDefault("SELFPLAY_MCTS_ROLLOUT_DEPTH", "7")
+	viper.SetDefault("SELFPLAY_MCTS_SIMULATIONS", "100")
+	viper.SetDefault("SELFPLAY_MCTS_ROLLOUT_DEPTH", "0")
 	viper.SetDefault("SELFPLAY_POLICY_ROLLOUT_PLAYER", false)
 
-	viper.SetDefault("EVALUATOR_PLAYER_TYPE", "minmax") // minmax | minmax-e | minmax-sm | mcts-pred
+	viper.SetDefault("EVALUATOR_PLAYER_TYPE", "mcts-pred") // minmax | minmax-e | minmax-sm | mcts-pred
 	viper.SetDefault("EVALUATOR_MINMAX_DEPTH", "3")
-	viper.SetDefault("EVALUATOR_MCTS_SIMULATIONS", "1000")
-	viper.SetDefault("EVALUATOR_MCTS_ROLLOUT_DEPTH", "7")
+	viper.SetDefault("EVALUATOR_MCTS_SIMULATIONS", "100")
+	viper.SetDefault("EVALUATOR_MCTS_ROLLOUT_DEPTH", "0")
 	viper.SetDefault("EVALUATOR_POLICY_ROLLOUT_PLAYER", false)
 }

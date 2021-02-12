@@ -1,8 +1,6 @@
 package randomPredictor
 
 import (
-	"math/rand"
-
 	"github.com/jamOne-/kiwi-zero/predictor"
 )
 
@@ -22,7 +20,15 @@ func (predictor *RandomPredictor) PredictValue(features predictor.Features) floa
 
 func (predictor *RandomPredictor) PredictPolicy(features predictor.Features) predictor.Distribution {
 	distribution := make([]float32, 65) // TODO
-	distribution[rand.Intn(65)] = 1
+	// distribution[rand.Intn(65)] = 1
+
+	for i := 0; i < 65; i++ {
+		distribution[i] = 1
+	}
 
 	return distribution
+}
+
+func (predictor *RandomPredictor) PredictValueAndPolicy(features predictor.Features) (float32, []float32) {
+	return predictor.PredictValue(features), predictor.PredictPolicy(features)
 }

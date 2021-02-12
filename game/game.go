@@ -14,10 +14,12 @@ type Game interface {
 	GetPossibleMoves() []Move
 	GetCurrentPlayerColor() PlayerColor
 	GetTurnNumber() int
+	GetMaxPossibleMoves() int
 	IsGameFinished() (bool, PlayerColor)
 	DrawBoard()
 	SerializeBoard(flipColors bool) string
 	OneHotBoard() [][][]float32
+	EncodeMoveToPolicy(move Move) []float32
 }
 
 const WHITE = PlayerColor(-1)

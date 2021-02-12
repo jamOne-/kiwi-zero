@@ -159,7 +159,6 @@ func FloatsToString(xs []float32) string {
 }
 
 func RandomFromDistribution(distribution []float32) int {
-	// TODO: binary search possible here
 	x := rand.Float32()
 	index := 0
 	for x-distribution[index] > 0 && index < len(distribution)-1 {

@@ -244,7 +244,8 @@ func (game *ReversiGame) SerializeBoard(flipColors bool) string {
 		stringsBoard[i] = strconv.Itoa(int(field) * factor)
 	}
 
-	return strings.Join(stringsBoard, " ")
+	board := strings.Join(stringsBoard, " ")
+	return fmt.Sprintf("%s %d %d", board, game.GetTurnNumber(), game.Turn)
 }
 
 func (game *ReversiGame) OneHotBoard() [][][]float32 {
@@ -274,8 +275,12 @@ func (game *ReversiGame) GetTurnNumber() int {
 	return len(game.History)
 }
 
-func GameMoveToPolicy(move game.Move) []float32 {
-	policy := make([]float32, 65) // 8*8+1
-	policy[move+1] = 1            // move + 1, because pass is -1
+func (game *ReversiGame) GetMaxPossibleMoves() int {
+	return TOTAL_SIZE + 1
+}
+
+func (game *ReversiGame) EncodeMoveToPolicy(move game.Move) []float32 {
+	policy := make([]float32, game.GetMaxPossibleMoves())
+	policy[move+1] = 1 // move + 1, because pass is -1
 	return policy
 }

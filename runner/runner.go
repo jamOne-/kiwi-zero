@@ -14,8 +14,8 @@ type GameResultsBatch struct {
 }
 
 type HistoryTuple struct {
-	Game game.Game
-	Move game.Move
+	Game   game.Game
+	Policy []float32
 }
 
 type GameResult struct {
@@ -44,18 +44,31 @@ func PlayGame(
 	history := make([]*HistoryTuple, 0)
 
 	for !finished {
-		currentPlayer := g.GetCurrentPlayerColor()
-		var move game.Move
+		currentColor := g.GetCurrentPlayerColor()
+		var currentPlayer player.Player
 
-		if currentPlayer == game.BLACK {
-			move = blackPlayer.SelectMove(g)
+		if currentColor == game.BLACK {
+			currentPlayer = blackPlayer
 		} else {
-			move = whitePlayer.SelectMove(g)
+			currentPlayer = whitePlayer
 		}
 
+		var move game.Move
+
 		if saveHistory {
-			tuple := &HistoryTuple{g.Copy(), move}
+			var policy []float32
+
+			if p, ok := currentPlayer.(player.PlayerWithPolicy); ok {
+				move, policy = p.SelectMoveWithPolicy(g)
+			} else {
+				move = currentPlayer.SelectMove(g)
+				policy = g.EncodeMoveToPolicy(move)
+			}
+
+			tuple := &HistoryTuple{g.Copy(), policy}
 			history = append(history, tuple)
+		} else {
+			move = currentPlayer.SelectMove(g)
 		}
 
 		finished, winner = g.MakeMove(move)
