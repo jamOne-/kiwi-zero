@@ -33,6 +33,7 @@ func initConfig() {
 	viper.SetDefault("OPTIMIZER_FITS_PER_ITERATION", 50)
 	viper.SetDefault("OPTIMIZER_TRAINING_SIZE", 512)
 	viper.SetDefault("OPTIMIZER_TRAINING_SET_SAME_GAMES_ALLOWED", true)
+	viper.SetDefault("OPTIMIZER_TRANSFORM_POSITIONS", true)
 	viper.SetDefault("OPTIMIZER_MAX_POSITIONS_FROM_BATCH", -1)
 	viper.SetDefault("OPTIMIZER_MAX_HISTORY_LENGTH", 150000)
 	viper.SetDefault("OPTIMIZER_OPTIMIZE_POLICY", true)

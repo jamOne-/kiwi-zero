@@ -2,10 +2,12 @@ package reversi
 
 import (
 	"fmt"
+	"math/rand"
 	"strconv"
 	"strings"
 
 	"github.com/jamOne-/kiwi-zero/game"
+	"github.com/jamOne-/kiwi-zero/utils"
 )
 
 type ReversiGame struct {
@@ -283,4 +285,37 @@ func (game *ReversiGame) EncodeMoveToPolicy(move game.Move) []float32 {
 	policy := make([]float32, game.GetMaxPossibleMoves())
 	policy[move+1] = 1 // move + 1, because pass is -1
 	return policy
+}
+
+func (game *ReversiGame) FlipColors() {
+	game.Turn *= -1
+
+	for i, color := range game.Board {
+		game.Board[i] = color * -1
+	}
+}
+
+func (game *ReversiGame) RandomPositionTransformation() {
+	TRANSFORMATIONS := 4 + 4
+	transformation := rand.Intn(TRANSFORMATIONS)
+
+	switch transformation {
+	case 0:
+		return
+	case 1:
+		fallthrough
+	case 2:
+		fallthrough
+	case 3:
+		utils.RotateSquareVector(game.Board, transformation)
+
+	case 4:
+		utils.PerformSymmetryVector1(game.Board)
+	case 5:
+		utils.PerformSymmetryVector2(game.Board)
+	case 6:
+		utils.PerformSymmetryVector3(game.Board)
+	case 7:
+		utils.PerformSymmetryVector4(game.Board)
+	}
 }

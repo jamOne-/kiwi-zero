@@ -20,6 +20,9 @@ type Game interface {
 	SerializeBoard(flipColors bool) string
 	OneHotBoard() [][][]float32
 	EncodeMoveToPolicy(move Move) []float32
+
+	FlipColors()
+	RandomPositionTransformation()
 }
 
 const WHITE = PlayerColor(-1)

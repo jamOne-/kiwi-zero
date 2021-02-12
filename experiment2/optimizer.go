@@ -18,7 +18,6 @@ import (
 
 	tfpredictor "github.com/jamOne-/kiwi-zero/TFPredictor"
 	"github.com/jamOne-/kiwi-zero/game"
-	"github.com/jamOne-/kiwi-zero/reversi"
 	"github.com/jamOne-/kiwi-zero/runner"
 	"github.com/jamOne-/kiwi-zero/utils"
 )
@@ -48,7 +47,7 @@ func Optimizer(
 	TRAINING_SIZE := viper.GetInt("OPTIMIZER_TRAINING_SIZE")
 	TRAINING_SET_SAME_GAMES_ALLOWED := viper.GetBool("OPTIMIZER_TRAINING_SET_SAME_GAMES_ALLOWED")
 	FLIP_POSITIONS_PROB := viper.GetFloat64("OPTIMIZER_FLIP_POSITIONS_PROB")
-	// TRAINING_TRANSFORM_POSITIONS := viper.GetBool("TRAINING_TRANSFORM_POSITIONS")
+	TRANSFORM_POSITIONS := viper.GetBool("OPTIMIZER_TRANSFORM_POSITIONS")
 
 	// Create models directory for current run
 	modelsDirPath := filepath.Join(resultsDirPath, "models")
@@ -93,9 +92,9 @@ func Optimizer(
 			results, totalPositions := batch.Results, batch.TotalPositions
 			positions := splitResults(results, totalPositions, optimizerIteration)
 
-			// if TRAINING_TRANSFORM_POSITIONS {
-			// 	transformPositions(positions)
-			// }
+			if TRANSFORM_POSITIONS {
+				transformPositions(positions)
+			}
 
 			if FLIP_POSITIONS_PROB > 0 {
 				flipPositionsColors(FLIP_POSITIONS_PROB, positions)
@@ -181,53 +180,18 @@ func splitResults(results []*runner.GameResult, totalPositions int, iteration in
 	return gamePositions
 }
 
-func randomPositionTransformation(position game.Game) {
-	TRANSFORMATIONS := 4 + 4
-	reversiPosition := position.(*reversi.ReversiGame) // todo: game.GetBoard()
-	transformation := rand.Intn(TRANSFORMATIONS)
-
-	switch transformation {
-	case 0:
-		fallthrough
-	case 1:
-		fallthrough
-	case 2:
-		fallthrough
-	case 3:
-		utils.RotateSquareVector(reversiPosition.Board, transformation)
-
-	case 4:
-		utils.PerformSymmetryVector1(reversiPosition.Board)
-	case 5:
-		utils.PerformSymmetryVector2(reversiPosition.Board)
-	case 6:
-		utils.PerformSymmetryVector3(reversiPosition.Board)
-	case 7:
-		utils.PerformSymmetryVector4(reversiPosition.Board)
-	}
-}
-
-func transformPositions(positions []game.Game) {
+func transformPositions(positions []*GamePosition) {
 	for _, position := range positions {
-		randomPositionTransformation(position)
+		position.position.RandomPositionTransformation()
 	}
 }
 
 func flipPositionsColors(flipProb float64, positions []*GamePosition) {
 	for _, position := range positions {
 		if rand.Float64() < flipProb {
-			flipGameColors(position.position)
+			position.position.FlipColors()
 			position.winner *= -1
 		}
-	}
-}
-
-func flipGameColors(g game.Game) {
-	reversiGame := g.(*reversi.ReversiGame) // todo: game.GetBoard(), SetCurrentPlayer
-	reversiGame.Turn *= -1
-
-	for i, color := range reversiGame.Board {
-		reversiGame.Board[i] = color * -1
 	}
 }
 
