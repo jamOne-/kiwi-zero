@@ -36,12 +36,20 @@ func ConnectFourGameFactory() game.Game {
 }
 
 func RandomStartConnectFourGameFactory() game.Game {
-	g := connectFour.NewConnectFourGame()
-	NUMBER_OF_RANDOM_MOVES := 4
+	NUMBER_OF_RANDOM_MOVES := 3
 
-	for i := 0; i < NUMBER_OF_RANDOM_MOVES; i += 1 {
-		g.MakeMove(randomPlayer.SelectRandomMove(g))
-		g.MakeMove(randomPlayer.SelectRandomMove(g))
+	var g game.Game
+	finished := true
+
+	for finished {
+		g = connectFour.NewConnectFourGame()
+
+		for i := 0; i < NUMBER_OF_RANDOM_MOVES; i += 1 {
+			g.MakeMove(randomPlayer.SelectRandomMove(g))
+			g.MakeMove(randomPlayer.SelectRandomMove(g))
+		}
+
+		finished, _ = g.IsGameFinished()
 	}
 
 	return g

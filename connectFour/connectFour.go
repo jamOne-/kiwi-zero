@@ -144,7 +144,7 @@ func (game *ConnectFourGame) GetTurnNumber() int {
 }
 
 func (game *ConnectFourGame) GetMaxPossibleMoves() int {
-	return TOTAL_SIZE + 1
+	return WIDTH + 1
 }
 
 func (game *ConnectFourGame) EncodeMoveToPolicy(move game.Move) []float32 {
