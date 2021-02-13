@@ -139,7 +139,7 @@ func (node *Node) expand(game game.Game) *Node {
 
 func randomSampleFromState(game game.Game) int8 {
 	randomPlayer := rp.NewRandomPlayer()
-	finished, winner := false, int8(0)
+	finished, winner := game.IsGameFinished()
 
 	for !finished {
 		move := randomPlayer.SelectMove(game)

@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	"github.com/jamOne-/kiwi-zero/predictor"
-	"github.com/jamOne-/kiwi-zero/reversiValueFns"
 
 	"github.com/spf13/viper"
 
@@ -39,6 +38,8 @@ func Optimizer(
 	gameResultsChan chan *runner.GameResultsBatch,
 	predictorsChan chan predictor.Predictor,
 	gameToFeaturesFn game.GameToFeaturesFn,
+	featuresShape string,
+	policyLength int,
 	resultsDirPath string,
 ) {
 	MAX_HISTORY_LENGTH := viper.GetInt("OPTIMIZER_MAX_HISTORY_LENGTH")
@@ -58,7 +59,8 @@ func Optimizer(
 	pythonOptimizerCmd := exec.Command(
 		"python3", "../python/optimizer/optimizer.py",
 		"--models_directory", modelsDirPath,
-		"--input_shape", reversiValueFns.FEATURES_FN_TO_SHAPE_DICT[viper.GetString("GAME_TO_FEATURES_FN")],
+		"--input_shape", featuresShape,
+		"--policy_length", strconv.Itoa(policyLength),
 		"--learning_rate", fmt.Sprintf("%f", viper.GetFloat64("OPTIMIZER_LEARNING_RATE")),
 		"--momentum", fmt.Sprintf("%f", viper.GetFloat64("OPTIMIZER_MOMENTUM")),
 		"--epochs", strconv.Itoa(viper.GetInt("OPTIMIZER_MAX_EPOCHS")),

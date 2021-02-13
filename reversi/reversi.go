@@ -312,7 +312,7 @@ func (game *ReversiGame) RandomPositionTransformation() {
 	case 4:
 		utils.PerformSymmetryVector1(game.Board)
 	case 5:
-		utils.PerformSymmetryVector2(game.Board)
+		utils.PerformSymmetryVector2(BOARD_SIZE, BOARD_SIZE, game.Board)
 	case 6:
 		utils.PerformSymmetryVector3(game.Board)
 	case 7:

@@ -71,6 +71,7 @@ def add_PolicyHead(model):
 
 def get_model(
     input_shape=(8, 8, 3),
+    policy_length=65,
     conv_filters=[32, 32, 64, 64],
     regularizer_const=1e-4,
     optimize_policy=True
@@ -108,7 +109,7 @@ def get_model(
             bias_regularizer=regularizers.l2(regularizer_const),
         )(policy_out)
         # policy_out = layers.Dropout(0.25)(policy_out)
-    policy_out = layers.Dense(65, activation='softmax', name='policy_out')(policy_out)
+    policy_out = layers.Dense(policy_length, activation='softmax', name='policy_out')(policy_out)
     
     ret = models.Model(
         inputs=inputs,
@@ -121,6 +122,7 @@ def get_model(
 
 def get_fully_connected_model(
     input_shape=(8, 8, 3),
+    policy_length=65,
     layers_count=1,
     layer_units=128,
     dropout_rate=0.25,
@@ -153,7 +155,7 @@ def get_fully_connected_model(
         # policy_out = layers.Dense(layer_units, activation='relu')(policy_out)
         # policy_out = layers.Dropout(dropout_rate)(policy_out)
 
-    policy_out = layers.Dense(65, activation='softmax', name='policy_out')(policy_out)
+    policy_out = layers.Dense(policy_length, activation='softmax', name='policy_out')(policy_out)
 
     ret = models.Model(
         inputs=inputs,

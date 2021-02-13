@@ -34,14 +34,6 @@ import (
 // 	return utils.CreateFilledVector(extendedNumberOfFeatures, 1)
 // }
 
-var FEATURES_FN_TO_SHAPE_DICT = map[string]string{
-	"board3":         "(8,8,3)",
-	"boardmoves":     "(8,8,4)",
-	"paddedmoves":    "(10,10,5)",
-	"board1features": "(72,1,1)",
-	"board1":         "(64,1,1)",
-}
-
 func ConvertReversiFnToGeneralFeatuersFn(reversiFn func(reversiGame *reversi.ReversiGame) game.Features) game.GameToFeaturesFn {
 	return func(g game.Game) game.Features {
 		reversiGame := g.(*reversi.ReversiGame)

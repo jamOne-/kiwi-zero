@@ -44,7 +44,7 @@ func negaMax(
 	// movesScores := getMovesAndScores(valueFn, g)
 	// sort.Sort(ByScore(movesScores))
 
-	bestValue, bestMoves := -INFINITY, []game.Move{game.Move(-1)}
+	bestValue, bestMoves := -INFINITY, []game.Move{}
 	// for _, moveScore := range movesScores {
 	// 	move := moveScore.move
 	moves := g.GetPossibleMoves()

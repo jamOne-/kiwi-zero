@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/jamOne-/kiwi-zero/edaxPlayer"
+	"github.com/jamOne-/kiwi-zero/games"
 	"github.com/jamOne-/kiwi-zero/policyPlayer"
 	"github.com/jamOne-/kiwi-zero/randomPlayer"
 
@@ -22,21 +23,12 @@ import (
 
 	"github.com/jamOne-/kiwi-zero/game"
 	"github.com/jamOne-/kiwi-zero/monteCarloTreeSearchPlayer"
-	"github.com/jamOne-/kiwi-zero/reversi"
 	"github.com/jamOne-/kiwi-zero/reversiValueFns"
 	"github.com/jamOne-/kiwi-zero/runner"
 	"github.com/jamOne-/kiwi-zero/utils"
 
 	"github.com/spf13/viper"
 )
-
-var REVERSI_TO_FEATURES_FN_DICT = map[string]game.GameToFeaturesFn{
-	"board3":         reversiValueFns.ConvertReversiFnToGeneralFeatuersFn(reversiValueFns.ReversiToOneHotBoard3),
-	"boardmoves":     reversiValueFns.ConvertReversiFnToGeneralFeatuersFn(reversiValueFns.ReversiToOneHotBoardMoves),
-	"paddedmoves":    reversiValueFns.ConvertReversiFnToGeneralFeatuersFn(reversiValueFns.ReversiToOneHotBoardPaddedMoves),
-	"board1features": reversiValueFns.ConvertReversiFnToGeneralFeatuersFn(reversiValueFns.ReversiToFeaturesExtended),
-	"board1":         reversiValueFns.ConvertReversiFnToGeneralFeatuersFn(reversiValueFns.ReversiToFeatures),
-}
 
 func getPlayerFactory(
 	gameToFeaturesFn game.GameToFeaturesFn,
@@ -72,6 +64,7 @@ func main() {
 	rand.Seed(time.Now().UnixNano())
 	initConfig()
 
+	GAME := viper.GetString("GAME")
 	GAME_TO_FEATURES_FN := viper.GetString("GAME_TO_FEATURES_FN")
 	MCTS_SIMULATIONS := viper.GetInt("MCTS_SIMULATIONS")
 	MINMAX_DEPTH := viper.GetInt("MINMAX_DEPTH")
@@ -84,15 +77,17 @@ func main() {
 	viper.WriteConfigAs(configPath)
 
 	initialPredictor := randomPredictor.NewRandomPredictor()
-	gameToFeaturesFn := REVERSI_TO_FEATURES_FN_DICT[GAME_TO_FEATURES_FN]
+	gameFactory := games.GAME_FACTORY_DICT[GAME]
+	gameToFeaturesInfo := games.FEATURES_FNS_DICT[GAME][GAME_TO_FEATURES_FN]
 
 	playersToCompareWith := make([]*PlayerToCompare, 0)
-	mctsPlayer := monteCarloTreeSearchPlayer.NewMonteCarloTreeSearchPlayer(MCTS_SIMULATIONS)
+	// mctsPlayer := monteCarloTreeSearchPlayer.NewMonteCarloTreeSearchPlayer(MCTS_SIMULATIONS)
+	mctsPlayer := monteCarloTreeSearchPlayer.NewGeneralMCTSPlayer(MCTS_SIMULATIONS, 2.0, 99, randomPlayer.NewRandomPlayer(), nil, nil, nil)
 	playersToCompareWith = append(playersToCompareWith, &PlayerToCompare{fmt.Sprintf("MCTS (%d sims)", MCTS_SIMULATIONS), mctsPlayer})
 	playersToCompareWith = append(playersToCompareWith, &PlayerToCompare{"Random", randomPlayer.NewRandomPlayer()})
 
 	if OLD_MINMAX_MODEL_PATH != "" {
-		oldGameToFeaturesFn := REVERSI_TO_FEATURES_FN_DICT[OLD_MINMAX_MODEL_GAME_TO_FEATURES_FN]
+		oldGameToFeaturesFn := games.FEATURES_FNS_DICT[GAME][OLD_MINMAX_MODEL_GAME_TO_FEATURES_FN].Fn
 		oldMinMaxPlayer := loadMinMaxPlayer(oldGameToFeaturesFn, OLD_MINMAX_MODEL_PATH, MINMAX_DEPTH)
 		playersToCompareWith = append(playersToCompareWith, &PlayerToCompare{"OLD MinMax", oldMinMaxPlayer})
 	}
@@ -102,16 +97,18 @@ func main() {
 		selfPlayTeacherFactory = getEdaxRunnerFactory(-64, 64, viper.GetInt("SELFPLAY_EDAX_DEPTH"), 100)
 	}
 
-	selfPlayPlayerFactory := getPlayerFactory(gameToFeaturesFn, true, viper.GetString("SELFPLAY_PLAYER_TYPE"))
-	evaluatorPlayerFactory := getPlayerFactory(gameToFeaturesFn, false, viper.GetString("EVALUATOR_PLAYER_TYPE"))
+	selfPlayPlayerFactory := getPlayerFactory(gameToFeaturesInfo.Fn, true, viper.GetString("SELFPLAY_PLAYER_TYPE"))
+	evaluatorPlayerFactory := getPlayerFactory(gameToFeaturesInfo.Fn, false, viper.GetString("EVALUATOR_PLAYER_TYPE"))
+
+	policyLength := (gameFactory()).GetMaxPossibleMoves()
 
 	gameResultsChan := make(chan *runner.GameResultsBatch)
 	bestPredictorsChan := make(chan predictor.Predictor)
 	newPredictorsChan := make(chan predictor.Predictor)
 
-	go SelfPlayLoop(bestPredictorsChan, gameResultsChan, randomStartReversiGameFactory, initialPredictor, selfPlayPlayerFactory, selfPlayTeacherFactory)
-	go Optimizer(gameResultsChan, newPredictorsChan, gameToFeaturesFn, resultsDirPath)
-	go Evaluator(newPredictorsChan, bestPredictorsChan, randomStartReversiGameFactory, initialPredictor, evaluatorPlayerFactory, playersToCompareWith, resultsDirPath)
+	go SelfPlayLoop(bestPredictorsChan, gameResultsChan, gameFactory, initialPredictor, selfPlayPlayerFactory, selfPlayTeacherFactory)
+	go Optimizer(gameResultsChan, newPredictorsChan, gameToFeaturesInfo.Fn, gameToFeaturesInfo.Shape, policyLength, resultsDirPath)
+	go Evaluator(newPredictorsChan, bestPredictorsChan, gameFactory, initialPredictor, evaluatorPlayerFactory, playersToCompareWith, resultsDirPath)
 	// bestValueFnsChan <- initialValueFn
 	bestPredictorsChan <- initialPredictor
 
@@ -130,22 +127,6 @@ func main() {
 	var waitGroup sync.WaitGroup
 	waitGroup.Add(1)
 	waitGroup.Wait()
-}
-
-func reversiGameFactory() game.Game {
-	return reversi.NewReversiGame()
-}
-
-func randomStartReversiGameFactory() game.Game {
-	g := reversi.NewReversiGame()
-	NUMBER_OF_RANDOM_MOVES := 4
-
-	for i := 0; i < NUMBER_OF_RANDOM_MOVES; i += 1 {
-		g.MakeMove(randomPlayer.SelectRandomMoveDifferentThan(g, reversi.PASS_MOVE))
-		g.MakeMove(randomPlayer.SelectRandomMoveDifferentThan(g, reversi.PASS_MOVE))
-	}
-
-	return g
 }
 
 func createResultsDir(resultsDirName string) string {

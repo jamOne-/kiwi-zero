@@ -115,12 +115,10 @@ func PerformSymmetryVector1(vec []int8) {
 	}
 }
 
-func PerformSymmetryVector2(vec []int8) {
-	N := int(math.Sqrt(float64(len(vec))))
-
-	for x := 0; x < N/2; x++ {
-		for y := 0; y < N; y++ {
-			i1, i2 := y*N+x, y*N+(N-1-x)
+func PerformSymmetryVector2(width int, height int, vec []int8) {
+	for x := 0; x < width/2; x++ {
+		for y := 0; y < height; y++ {
+			i1, i2 := y*width+x, y*width+(width-1-x)
 			vec[i1], vec[i2] = vec[i2], vec[i1]
 		}
 	}

@@ -13,6 +13,7 @@ parser.add_argument('--epochs', default=1000, type=int)
 parser.add_argument('--batch_size', default=16, type=int)
 parser.add_argument('--regularizer_const', default=5e-4, type=float)
 parser.add_argument('--input_shape', default="(8, 8, 3)", type=str)
+parser.add_argument('--policy_length', default=65, type=int)
 parser.add_argument('--optimize_policy', default=1.0, type=float)
 
 parser.add_argument('--fully_connected', default=0, type=int)
@@ -94,6 +95,7 @@ if __name__ == "__main__":
     if args.fully_connected:
         model = Model.get_fully_connected_model(
             input_shape=input_shape,
+            policy_length=args.policy_length,
             layers_count=args.fc_layers_count,
             layer_units=args.fc_layer_units,
             dropout_rate=args.fc_dropout,
@@ -105,6 +107,7 @@ if __name__ == "__main__":
 
         model = Model.get_model(
             input_shape=input_shape,
+            policy_length=args.policy_length,
             conv_filters=conv_filters,
             regularizer_const=args.regularizer_const,
             optimize_policy=bool(args.optimize_policy),
