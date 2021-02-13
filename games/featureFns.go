@@ -39,6 +39,7 @@ var CONNECT4_FEATURES_FNS = map[string]*FeaturesFnInfo{
 var GOMOKU_FEATURES_FNS = map[string]*FeaturesFnInfo{
 	"board3": &FeaturesFnInfo{"(8,8,3)", OneHotBoard3},
 	"board1": &FeaturesFnInfo{"(64,1,1)", gomoku.ConvertGomokuFnToGeneralFeatuersFn(gomoku.GomokuToBoard1)},
+	"b3turn": &FeaturesFnInfo{"(8,8,5)", gomoku.ConvertGomokuFnToGeneralFeatuersFn(gomoku.GomokuToBoardTurn)},
 }
 
 func OneHotBoard3(game game.Game) game.Features {
