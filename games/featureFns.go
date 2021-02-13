@@ -24,6 +24,7 @@ var FEATURES_FNS_DICT = map[string]map[string]*FeaturesFnInfo{
 var REVERSI_FEATURES_FNS = map[string]*FeaturesFnInfo{
 	"board3":         &FeaturesFnInfo{"(8,8,3)", OneHotBoard3},
 	"boardmoves":     &FeaturesFnInfo{"(8,8,4)", reversiValueFns.ConvertReversiFnToGeneralFeatuersFn(reversiValueFns.ReversiToOneHotBoardMoves)},
+	"bmt":            &FeaturesFnInfo{"(8,8,6)", reversiValueFns.ConvertReversiFnToGeneralFeatuersFn(reversiValueFns.ReversiToOneHotBoardMovesTurn)},
 	"paddedmoves":    &FeaturesFnInfo{"(10,10,5)", reversiValueFns.ConvertReversiFnToGeneralFeatuersFn(reversiValueFns.ReversiToOneHotBoardPaddedMoves)},
 	"board1features": &FeaturesFnInfo{"(72,1,1)", reversiValueFns.ConvertReversiFnToGeneralFeatuersFn(reversiValueFns.ReversiToFeaturesExtended)},
 	"board1":         &FeaturesFnInfo{"(64,1,1)", reversiValueFns.ConvertReversiFnToGeneralFeatuersFn(reversiValueFns.ReversiToFeatures)},

@@ -4,6 +4,7 @@ import (
 	"github.com/jamOne-/kiwi-zero/game"
 	"github.com/jamOne-/kiwi-zero/predictor"
 	"github.com/jamOne-/kiwi-zero/reversi"
+	"github.com/jamOne-/kiwi-zero/utils"
 )
 
 // var NUMBER_OF_FEATURES = 8*8 + 2 // fields + count + mobility
@@ -276,3 +277,44 @@ func calculateQuotient(a float64, b float64) float64 {
 // 	11, -4, 2, 2, 2, 2, -4, 11,
 // 	-3, -7, -4, 1, 1, -4, -7, -3,
 // 	20, -3, 11, 8, 8, 11, -3, 20, 0, 0}
+
+func ReversiToOneHotBoardMovesTurn(game *reversi.ReversiGame) game.Features {
+	emptyOneHot := []float32{1, 0, 0, 0, 0, 0}
+	whiteOneHot := []float32{0, 1, 0, 0, 0, 0}
+	blackOneHot := []float32{0, 0, 1, 0, 0, 0}
+	features := make([][][]float32, reversi.BOARD_SIZE)
+
+	turnDim := 4 + utils.BoolToInt(game.Turn == reversi.WHITE)
+	emptyOneHot[turnDim] = 1
+	whiteOneHot[turnDim] = 1
+	blackOneHot[turnDim] = 1
+
+	for row := int8(0); row < reversi.BOARD_SIZE; row++ {
+		features[row] = make([][]float32, reversi.BOARD_SIZE)
+
+		for col := int8(0); col < reversi.BOARD_SIZE; col++ {
+			field := game.Board[reversi.YXToField(row, col)]
+
+			oneHotField := emptyOneHot
+			if field == reversi.WHITE {
+				oneHotField = whiteOneHot
+			} else if field == reversi.BLACK {
+				oneHotField = blackOneHot
+			}
+
+			features[row][col] = oneHotField
+		}
+	}
+
+	possibleMoves := game.GetPossibleMoves()
+	for _, move := range possibleMoves {
+		if move == -1 {
+			continue
+		}
+
+		y, x := reversi.GetYX(move)
+		features[y][x][3] = 1
+	}
+
+	return features
+}
