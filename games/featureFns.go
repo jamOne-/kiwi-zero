@@ -32,6 +32,7 @@ var REVERSI_FEATURES_FNS = map[string]*FeaturesFnInfo{
 var CONNECT4_FEATURES_FNS = map[string]*FeaturesFnInfo{
 	"board3": &FeaturesFnInfo{"(6,7,3)", OneHotBoard3},
 	"board1": &FeaturesFnInfo{"(42,1,1)", connectFour.ConvertConnect4FnToGeneralFeatuersFn(connectFour.Connect4ToBoard1)},
+	"b3turn": &FeaturesFnInfo{"(6,7,5)", connectFour.ConvertConnect4FnToGeneralFeatuersFn(connectFour.Connect4ToBoardTurn)},
 }
 
 var GOMOKU_FEATURES_FNS = map[string]*FeaturesFnInfo{

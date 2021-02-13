@@ -1,6 +1,9 @@
 package connectFour
 
-import "github.com/jamOne-/kiwi-zero/game"
+import (
+	"github.com/jamOne-/kiwi-zero/game"
+	"github.com/jamOne-/kiwi-zero/utils"
+)
 
 func ConvertConnect4FnToGeneralFeatuersFn(connect4Fn func(c4game *ConnectFourGame) game.Features) game.GameToFeaturesFn {
 	return func(g game.Game) game.Features {
@@ -21,4 +24,35 @@ func Connect4ToBoard1(c4game *ConnectFourGame) game.Features {
 	}
 
 	return features
+}
+
+func Connect4ToBoardTurn(c4game *ConnectFourGame) game.Features {
+	emptyField := []float32{0, 1, 0, 0, 0}
+	whiteField := []float32{1, 0, 0, 0, 0}
+	blackField := []float32{0, 0, 1, 0, 0}
+	oneHotBoard := make([][][]float32, HEIGHT)
+
+	turnDim := 3 + utils.BoolToInt(c4game.Turn == WHITE)
+	emptyField[turnDim] = 1
+	whiteField[turnDim] = 1
+	blackField[turnDim] = 1
+
+	for row := int8(0); row < HEIGHT; row++ {
+		oneHotBoard[row] = make([][]float32, WIDTH)
+
+		for col := int8(0); col < WIDTH; col++ {
+			field := c4game.Board[row*WIDTH+col]
+
+			oneHotField := emptyField
+			if field == WHITE {
+				oneHotField = whiteField
+			} else if field == BLACK {
+				oneHotField = blackField
+			}
+
+			oneHotBoard[row][col] = oneHotField
+		}
+	}
+
+	return oneHotBoard
 }
