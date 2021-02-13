@@ -93,8 +93,10 @@ func main() {
 	}
 
 	var selfPlayTeacherFactory runner.NewPlayerFactory = nil
-	if viper.GetBool("SELFPLAY_TEACHER") {
-		selfPlayTeacherFactory = getEdaxRunnerFactory(-64, 64, viper.GetInt("SELFPLAY_EDAX_DEPTH"), 100)
+	if viper.GetString("SELFPLAY_TEACHER") == "edax" {
+		selfPlayTeacherFactory = getEdaxRunnerFactory(-64, 64, viper.GetInt("SELFPLAY_TEACHER_EDAX_DEPTH"), 100)
+	} else if viper.GetString("SELFPLAY_TEACHER") == "mcts" {
+		selfPlayTeacherFactory = runner.FactorizePlayer(monteCarloTreeSearchPlayer.NewGeneralMCTSPlayer(viper.GetInt("SELFPLAY_TEACHER_MCTS_SIMULATIONS"), 2.0, 99, randomPlayer.NewRandomPlayer(), nil, nil, nil))
 	}
 
 	selfPlayPlayerFactory := getPlayerFactory(gameToFeaturesInfo.Fn, true, viper.GetString("SELFPLAY_PLAYER_TYPE"))

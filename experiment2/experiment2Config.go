@@ -3,7 +3,7 @@ package main
 import "github.com/spf13/viper"
 
 func initConfig() {
-	viper.SetDefault("GAME", "connect4random")
+	viper.SetDefault("GAME", "gomokurandom")
 
 	viper.SetDefault("CHECKPOINT_EVERY", 25)
 	viper.SetDefault("COMPARE_AT_CHECKPOINTS", true)
@@ -47,18 +47,19 @@ func initConfig() {
 
 	viper.SetDefault("OPTIMIZER_CONV_FILTERS", "[64,64]")
 
-	viper.SetDefault("SELFPLAY_EDAX_DEPTH", 1)
-	viper.SetDefault("SELFPLAY_TEACHER", false)
+	viper.SetDefault("SELFPLAY_TEACHER", "mcts") // edax | mcts
+	viper.SetDefault("SELFPLAY_TEACHER_EDAX_DEPTH", 1)
+	viper.SetDefault("SELFPLAY_TEACHER_MCTS_SIMULATIONS", 1000)
 
-	viper.SetDefault("SELFPLAY_PLAYER_TYPE", "minmax-e") // minmax | minmax-e | minmax-sm | mcts-pred
+	viper.SetDefault("SELFPLAY_PLAYER_TYPE", "mcts-pred") // minmax | minmax-e | minmax-sm | mcts-pred
 	viper.SetDefault("SELFPLAY_MINMAX_DEPTH", "3")
-	viper.SetDefault("SELFPLAY_MCTS_SIMULATIONS", "100")
+	viper.SetDefault("SELFPLAY_MCTS_SIMULATIONS", "200")
 	viper.SetDefault("SELFPLAY_MCTS_ROLLOUT_DEPTH", "0")
 	viper.SetDefault("SELFPLAY_POLICY_ROLLOUT_PLAYER", false)
 
-	viper.SetDefault("EVALUATOR_PLAYER_TYPE", "minmax-e") // minmax | minmax-e | minmax-sm | mcts-pred
+	viper.SetDefault("EVALUATOR_PLAYER_TYPE", "mcts-pred") // minmax | minmax-e | minmax-sm | mcts-pred
 	viper.SetDefault("EVALUATOR_MINMAX_DEPTH", "3")
-	viper.SetDefault("EVALUATOR_MCTS_SIMULATIONS", "100")
+	viper.SetDefault("EVALUATOR_MCTS_SIMULATIONS", "200")
 	viper.SetDefault("EVALUATOR_MCTS_ROLLOUT_DEPTH", "0")
 	viper.SetDefault("EVALUATOR_POLICY_ROLLOUT_PLAYER", false)
 }
