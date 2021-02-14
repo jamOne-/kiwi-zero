@@ -56,3 +56,20 @@ func Connect4ToBoardTurn(c4game *ConnectFourGame) game.Features {
 
 	return oneHotBoard
 }
+
+func Connect4ToBoard1Turn(c4game *ConnectFourGame) game.Features {
+	size := TOTAL_SIZE + 1
+	features := make([][][]float32, size)
+	for row := 0; row < size; row++ {
+		features[row] = make([][]float32, 1)
+		features[row][0] = make([]float32, 1)
+	}
+
+	for i, field := range c4game.Board {
+		features[i][0][0] = float32(field)
+	}
+
+	features[size-1][0][0] = float32(c4game.Turn)
+
+	return features
+}
