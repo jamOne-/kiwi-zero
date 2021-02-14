@@ -169,9 +169,9 @@ func (game *ConnectFourGame) RandomPositionTransformation(policy []float32) {
 	case 0:
 		return
 	case 1:
-		utils.PerformSymmetryVector2Float32(WIDTH, HEIGHT, policy)
+		utils.PerformSymmetryVector2Int8(WIDTH, HEIGHT, game.Board)
 		if policy != nil {
-			utils.PerformSymmetryVector2Float32(WIDTH, HEIGHT, policy)
+			utils.PerformSymmetryVector2Float32(WIDTH, 1, policy)
 		}
 	}
 }
