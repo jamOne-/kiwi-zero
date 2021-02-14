@@ -82,7 +82,7 @@ func CreateFilledVector(length int, value float64) *mat.VecDense {
 	return vec
 }
 
-func RotateSquareVector(vec []int8, rotates int) {
+func RotateSquareVectorInt8(vec []int8, rotates int) {
 	N := int(math.Sqrt(float64(len(vec))))
 
 	for y := 0; y < N/2; y++ {
@@ -104,7 +104,7 @@ func RotateSquareVector(vec []int8, rotates int) {
 	}
 }
 
-func PerformSymmetryVector1(vec []int8) {
+func PerformSymmetryVector1Int8(vec []int8) {
 	N := int(math.Sqrt(float64(len(vec))))
 
 	for y := 0; y < N/2; y++ {
@@ -115,7 +115,7 @@ func PerformSymmetryVector1(vec []int8) {
 	}
 }
 
-func PerformSymmetryVector2(width int, height int, vec []int8) {
+func PerformSymmetryVector2Int8(width int, height int, vec []int8) {
 	for x := 0; x < width/2; x++ {
 		for y := 0; y < height; y++ {
 			i1, i2 := y*width+x, y*width+(width-1-x)
@@ -124,7 +124,7 @@ func PerformSymmetryVector2(width int, height int, vec []int8) {
 	}
 }
 
-func PerformSymmetryVector3(vec []int8) {
+func PerformSymmetryVector3Int8(vec []int8) {
 	N := int(math.Sqrt(float64(len(vec))))
 
 	for y := 0; y < N; y++ {
@@ -135,7 +135,71 @@ func PerformSymmetryVector3(vec []int8) {
 	}
 }
 
-func PerformSymmetryVector4(vec []int8) {
+func PerformSymmetryVector4Int8(vec []int8) {
+	N := int(math.Sqrt(float64(len(vec))))
+
+	for y := 0; y < N; y++ {
+		for x := 0; x < N-y-1; x++ {
+			i1, i2 := y*N+x, (N-1-x)*N+(N-1-y)
+			vec[i1], vec[i2] = vec[i2], vec[i1]
+		}
+	}
+}
+
+func RotateSquareVectorFloat32(vec []float32, rotates int) {
+	N := int(math.Sqrt(float64(len(vec))))
+
+	for y := 0; y < N/2; y++ {
+		for x := y; x < N-y-1; x++ {
+			indices := []int{
+				y*N + x,
+				(N-1-x)*N + y,
+				(N-1-y)*N + (N - 1 - x),
+				x*N + (N - 1 - y)}
+
+			for rotation := 0; rotation < rotates; rotation++ {
+				aux := vec[indices[0]]
+				vec[indices[0]] = vec[indices[1]]
+				vec[indices[1]] = vec[indices[2]]
+				vec[indices[2]] = vec[indices[3]]
+				vec[indices[3]] = aux
+			}
+		}
+	}
+}
+
+func PerformSymmetryVector1Float32(vec []float32) {
+	N := int(math.Sqrt(float64(len(vec))))
+
+	for y := 0; y < N/2; y++ {
+		for x := 0; x < N; x++ {
+			i1, i2 := y*N+x, (N-1-y)*N+x
+			vec[i1], vec[i2] = vec[i2], vec[i1]
+		}
+	}
+}
+
+func PerformSymmetryVector2Float32(width int, height int, vec []float32) {
+	for x := 0; x < width/2; x++ {
+		for y := 0; y < height; y++ {
+			i1, i2 := y*width+x, y*width+(width-1-x)
+			vec[i1], vec[i2] = vec[i2], vec[i1]
+		}
+	}
+}
+
+func PerformSymmetryVector3Float32(vec []float32) {
+	N := int(math.Sqrt(float64(len(vec))))
+
+	for y := 0; y < N; y++ {
+		for x := y + 1; x < N; x++ {
+			i1, i2 := y*N+x, x*N+y
+			vec[i1], vec[i2] = vec[i2], vec[i1]
+		}
+	}
+}
+
+func PerformSymmetryVector4Float32(vec []float32) {
 	N := int(math.Sqrt(float64(len(vec))))
 
 	for y := 0; y < N; y++ {

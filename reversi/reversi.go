@@ -295,7 +295,7 @@ func (game *ReversiGame) FlipColors() {
 	}
 }
 
-func (game *ReversiGame) RandomPositionTransformation() {
+func (game *ReversiGame) RandomPositionTransformation(policy []float32) {
 	TRANSFORMATIONS := 4 + 4
 	transformation := rand.Intn(TRANSFORMATIONS)
 
@@ -307,15 +307,30 @@ func (game *ReversiGame) RandomPositionTransformation() {
 	case 2:
 		fallthrough
 	case 3:
-		utils.RotateSquareVector(game.Board, transformation)
+		utils.RotateSquareVectorInt8(game.Board, transformation)
+		if policy != nil {
+			utils.RotateSquareVectorFloat32(policy, transformation)
+		}
 
 	case 4:
-		utils.PerformSymmetryVector1(game.Board)
+		utils.PerformSymmetryVector1Int8(game.Board)
+		if policy != nil {
+			utils.PerformSymmetryVector1Float32(policy)
+		}
 	case 5:
-		utils.PerformSymmetryVector2(BOARD_SIZE, BOARD_SIZE, game.Board)
+		utils.PerformSymmetryVector2Int8(BOARD_SIZE, BOARD_SIZE, game.Board)
+		if policy != nil {
+			utils.PerformSymmetryVector2Float32(BOARD_SIZE, BOARD_SIZE, policy)
+		}
 	case 6:
-		utils.PerformSymmetryVector3(game.Board)
+		utils.PerformSymmetryVector3Int8(game.Board)
+		if policy != nil {
+			utils.PerformSymmetryVector3Float32(policy)
+		}
 	case 7:
-		utils.PerformSymmetryVector4(game.Board)
+		utils.PerformSymmetryVector4Int8(game.Board)
+		if policy != nil {
+			utils.PerformSymmetryVector4Float32(policy)
+		}
 	}
 }

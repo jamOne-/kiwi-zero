@@ -161,7 +161,7 @@ func (game *ConnectFourGame) FlipColors() {
 	}
 }
 
-func (game *ConnectFourGame) RandomPositionTransformation() {
+func (game *ConnectFourGame) RandomPositionTransformation(policy []float32) {
 	TRANSFORMATIONS := 2
 	transformation := rand.Intn(TRANSFORMATIONS)
 
@@ -169,7 +169,10 @@ func (game *ConnectFourGame) RandomPositionTransformation() {
 	case 0:
 		return
 	case 1:
-		utils.PerformSymmetryVector2(WIDTH, HEIGHT, game.Board)
+		utils.PerformSymmetryVector2Float32(WIDTH, HEIGHT, policy)
+		if policy != nil {
+			utils.PerformSymmetryVector2Float32(WIDTH, HEIGHT, policy)
+		}
 	}
 }
 

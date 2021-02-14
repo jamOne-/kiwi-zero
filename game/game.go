@@ -22,7 +22,7 @@ type Game interface {
 	EncodeMoveToPolicy(move Move) []float32
 
 	FlipColors()
-	RandomPositionTransformation()
+	RandomPositionTransformation(policy []float32)
 }
 
 const WHITE = PlayerColor(-1)

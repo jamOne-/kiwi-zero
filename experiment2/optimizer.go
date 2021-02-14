@@ -184,7 +184,7 @@ func splitResults(results []*runner.GameResult, totalPositions int, iteration in
 
 func transformPositions(positions []*GamePosition) {
 	for _, position := range positions {
-		position.position.RandomPositionTransformation()
+		position.position.RandomPositionTransformation(position.policy[1:])
 	}
 }
 

@@ -152,7 +152,7 @@ func (gomoku *GomokuGame) FlipColors() {
 	}
 }
 
-func (gomoku *GomokuGame) RandomPositionTransformation() {
+func (gomoku *GomokuGame) RandomPositionTransformation(policy []float32) {
 	TRANSFORMATIONS := 4 + 4
 	transformation := rand.Intn(TRANSFORMATIONS)
 
@@ -164,16 +164,31 @@ func (gomoku *GomokuGame) RandomPositionTransformation() {
 	case 2:
 		fallthrough
 	case 3:
-		utils.RotateSquareVector(gomoku.Board, transformation)
+		utils.RotateSquareVectorInt8(gomoku.Board, transformation)
+		if policy != nil {
+			utils.RotateSquareVectorFloat32(policy, transformation)
+		}
 
 	case 4:
-		utils.PerformSymmetryVector1(gomoku.Board)
+		utils.PerformSymmetryVector1Int8(gomoku.Board)
+		if policy != nil {
+			utils.PerformSymmetryVector1Float32(policy)
+		}
 	case 5:
-		utils.PerformSymmetryVector2(WIDTH, HEIGHT, gomoku.Board)
+		utils.PerformSymmetryVector2Int8(WIDTH, HEIGHT, gomoku.Board)
+		if policy != nil {
+			utils.PerformSymmetryVector2Float32(WIDTH, HEIGHT, policy)
+		}
 	case 6:
-		utils.PerformSymmetryVector3(gomoku.Board)
+		utils.PerformSymmetryVector3Int8(gomoku.Board)
+		if policy != nil {
+			utils.PerformSymmetryVector3Float32(policy)
+		}
 	case 7:
-		utils.PerformSymmetryVector4(gomoku.Board)
+		utils.PerformSymmetryVector4Int8(gomoku.Board)
+		if policy != nil {
+			utils.PerformSymmetryVector4Float32(policy)
+		}
 	}
 }
 
