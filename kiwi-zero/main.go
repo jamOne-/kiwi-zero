@@ -1,20 +1,30 @@
 package main
 
 import (
+	"flag"
 	"fmt"
+	"log"
 	"math"
 	"math/rand"
 	"sort"
 	"time"
 
-	"github.com/jamOne-/kiwi-zero/monteCarloTreeSearchPlayer"
+	tfpredictor "github.com/jamOne-/kiwi-zero/TFPredictor"
 
-	"github.com/jamOne-/kiwi-zero/randomPlayer"
+	"github.com/jamOne-/kiwi-zero/policyPlayer"
+	"github.com/jamOne-/kiwi-zero/predictor"
+	"github.com/jamOne-/kiwi-zero/reversiValueFns"
+
+	"github.com/jamOne-/kiwi-zero/humanPlayer"
+	"github.com/jamOne-/kiwi-zero/minMaxPlayer"
 
 	"github.com/jamOne-/kiwi-zero/edaxPlayer"
+	"github.com/jamOne-/kiwi-zero/games"
+	"github.com/jamOne-/kiwi-zero/monteCarloTreeSearchPlayer"
+	"github.com/jamOne-/kiwi-zero/player"
+	"github.com/jamOne-/kiwi-zero/randomPlayer"
 
 	"github.com/jamOne-/kiwi-zero/game"
-	"github.com/jamOne-/kiwi-zero/reversi"
 )
 
 func NeutralValueFunction(game game.Game) float64 {
@@ -25,12 +35,94 @@ func ReversiTempFn(turn int) float64 {
 	return -0.05 + 1.3*math.Exp(-0.11*float64(turn))
 }
 
+func instantiatePlayer(
+	gameName string,
+	playerType string,
+	mmDepth int,
+	mmEpsilon float64,
+	pred predictor.Predictor,
+	modelFn string,
+	mctsSims int,
+	mctsDepth int,
+) player.Player {
+	switch playerType {
+	case "random":
+		return randomPlayer.NewRandomPlayer()
+	case "human":
+		return humanPlayer.NewHumanPlayer()
+	case "edax":
+		return edaxPlayer.NewEdaxPlayer(-64, 64, mmDepth, 100)
+	case "minmax":
+		featuresFn := games.FEATURES_FNS_DICT[gameName][modelFn].Fn
+		valueFn := reversiValueFns.CreateMinMaxValueFn(featuresFn, pred)
+		return minMaxPlayer.NewMinMaxPlayer(mmDepth, valueFn)
+	case "minmax-e":
+		featuresFn := games.FEATURES_FNS_DICT[gameName][modelFn].Fn
+		valueFn := reversiValueFns.CreateMinMaxValueFn(featuresFn, pred)
+		return minMaxPlayer.NewEpsilonGreedyMinMaxPlayer(mmDepth, mmEpsilon, valueFn)
+	case "mcts":
+		var valueFn game.ValueFn = nil
+		var valueAndPolicyFn monteCarloTreeSearchPlayer.ValueAndPolicyFn = nil
+
+		if pred != nil {
+			featuresFn := games.FEATURES_FNS_DICT[gameName][modelFn].Fn
+			valueFn = reversiValueFns.CreateMinMaxValueFn(featuresFn, pred)
+			valueAndPolicyFn = predictor.CreateValueAndPolicyFn(featuresFn, pred)
+		}
+
+		return monteCarloTreeSearchPlayer.NewGeneralMCTSPlayer(
+			mctsSims,
+			2.0,
+			mctsDepth,
+			randomPlayer.NewRandomPlayer(),
+			valueFn,
+			valueAndPolicyFn,
+			nil,
+		)
+	case "policy":
+		featuresFn := games.FEATURES_FNS_DICT[gameName][modelFn].Fn
+		gameToDistributionFn := policyPlayer.GameToDistributionFnFromPredictor(featuresFn, pred)
+		return policyPlayer.NewPolicyPlayer(gameToDistributionFn)
+	}
+
+	log.Fatal("Wrong player type!")
+	return nil
+}
+
 func main() {
 	rand.Seed(time.Now().UnixNano())
 
-	totalScore := 0
-	times1, times2 := make([]time.Duration, 0), make([]time.Duration, 0)
-	NUMBER_OF_GAMES := 10
+	NUMBER_OF_GAMES := flag.Int("games", 10, "Number of games to play")
+	GAME_NAME := flag.String("game", "reversirandom", "reversi|reversirandom|connect4|connect4random|gomoku|gomokurandom")
+	DRAW_BOARD := flag.Bool("draw-board", false, "If set, draws board after every move")
+	P1_TYPE := flag.String("p1", "", "minmax|minmax-e|mcts|policy|random|human|edax")
+	P2_TYPE := flag.String("p2", "", "minmax|minmax-e|mcts|policy|random|human|edax")
+	P1_MINMAX_DEPTH := flag.Int("p1-minmax-depth", 3, "Depth of Minmax search for Player 1")
+	P2_MINMAX_DEPTH := flag.Int("p2-minmax-depth", 3, "Depth of Minmax search for Player 2")
+	P1_MINMAX_EPSILON := flag.Float64("p1-minmax-e", 3, "Epsilon value of Minmax-e for Player 1")
+	P2_MINMAX_EPSILON := flag.Float64("p2-minmax-e", 3, "Epsilon value of Minmax-e for Player 2")
+	P1_MODEL_PATH := flag.String("p1-model-path", "", "Path of serialized model for Player 1")
+	P2_MODEL_PATH := flag.String("p2-model-path", "", "Path of serialized model for Player 2")
+	P1_MODEL_FN := flag.String("p1-model-fn", "board3", "board1|board1features|b1turn|board3|b3turn|bmt|boardmoves|paddedmoves")
+	P2_MODEL_FN := flag.String("p2-model-fn", "board3", "board1|board1features|b1turn|board3|b3turn|bmt|boardmoves|paddedmoves")
+	P1_MCTS_SIMS := flag.Int("p1-mcts-sims", 1000, "Number of simulations for MCTS for Player 1")
+	P2_MCTS_SIMS := flag.Int("p2-mcts-sims", 1000, "Number of simulations for MCTS for Player 2")
+	P1_MCTS_DEPTH := flag.Int("p1-mcts-depth", 99, "Rollout depth of MCTS simulations for Player 1")
+	P2_MCTS_DEPTH := flag.Int("p2-mcts-depth", 99, "Rollout depth of MCTS simulations for Player 2")
+	flag.Parse()
+
+	var pred1 predictor.Predictor = nil
+	if *P1_MODEL_PATH != "" {
+		pred1 = tfpredictor.NewTFPredictor(*P1_MODEL_PATH)
+	}
+	var pred2 predictor.Predictor = nil
+	if *P2_MODEL_PATH != "" {
+		pred2 = tfpredictor.NewTFPredictor(*P2_MODEL_PATH)
+	}
+
+	gameFactory := games.GAME_FACTORY_DICT[*GAME_NAME]
+	p1Score, p2Score := 0, 0
+	times1, times2 := &[]time.Duration{}, &[]time.Duration{}
 
 	// 1 layer:
 	// tfpredictor := tfpredictor.NewTFPredictor("../experiment2/results/2020-11-04-211132/models/150")
@@ -52,84 +144,87 @@ func main() {
 
 	// valueFn := reversiValueFns.CreateMinMaxValueFn(gameToFeaturesFn, tfpredictor)
 
-	for gameNumber := 0; gameNumber < NUMBER_OF_GAMES; gameNumber += 1 {
-		g := reversi.NewReversiGame()
-		// player1 := humanPlayer.NewHumanPlayer()
-		// player2 := monteCarloTreeSearchPlayer.NewThreadedMonteCarloTreeSearchPlayer(500, 1)
-		// player2 := randomPlayer.NewRandomPlayer()
-		// player1 := policyPlayer.NewPolicyPlayer(gameToDistributionFn)
-		// player2 := minMaxPlayer.NewPredictorMinMaxPlayer(4)
-		// player2 := minMaxPlayer.NewMinMaxPlayer(7)
-		// player2 := randomPlayer.NewRandomPlayer()
-		// player2 := monteCarloTreeSearchPlayer.NewGeneralMCTSPlayer(2000, 99, randomPlayer.NewRandomPlayer(), valueFn)
+	gamesToPlay := make([]game.Game, *NUMBER_OF_GAMES)
+	for i := 0; i < *NUMBER_OF_GAMES/2; i++ {
+		g := gameFactory()
+		gamesToPlay[2*i] = g
+		gamesToPlay[2*i+1] = g.Copy()
+	}
+	if *NUMBER_OF_GAMES%2 == 1 {
+		gamesToPlay[*NUMBER_OF_GAMES-1] = gameFactory()
+	}
 
-		// player1 := minMaxPlayer.NewMinMaxPlayer(4, valueFn)
-		player1 := monteCarloTreeSearchPlayer.NewGeneralMCTSPlayer(
-			100,
-			2.0,
-			99,
-			randomPlayer.NewRandomPlayer(),
-			NeutralValueFunction,
-			nil,
-			ReversiTempFn,
-		)
-		player2 := monteCarloTreeSearchPlayer.NewMonteCarloTreeSearchPlayer(100)
-		// player1 := monteCarloTreeSearchPlayer.NewLazyExpandMonteCarloTreeSearchPlayer(1000)
-		edax := edaxPlayer.NewEdaxPlayer(-64, 64, 1, 100)
-		random := randomPlayer.NewRandomPlayer()
-		// player2 := edax
-
-		// g.DrawBoard()
-		// fmt.Println("")
-
+	for gameNumber := 0; gameNumber < *NUMBER_OF_GAMES; gameNumber += 1 {
+		g := gamesToPlay[gameNumber]
 		finished, winner := false, int8(0)
+		blackPlayer := instantiatePlayer(
+			*GAME_NAME,
+			*P1_TYPE,
+			*P1_MINMAX_DEPTH,
+			*P1_MINMAX_EPSILON,
+			pred1,
+			*P1_MODEL_FN,
+			*P1_MCTS_SIMS,
+			*P1_MCTS_DEPTH,
+		)
+		whitePlayer := instantiatePlayer(
+			*GAME_NAME,
+			*P2_TYPE,
+			*P2_MINMAX_DEPTH,
+			*P2_MINMAX_EPSILON,
+			pred2,
+			*P2_MODEL_FN,
+			*P2_MCTS_SIMS,
+			*P2_MCTS_DEPTH,
+		)
+		blackTimes, whiteTimes := times1, times2
+		blackScore, whiteScore := &p1Score, &p2Score
 
-		START_RANDOM_MOVES := 0
-		for i := 0; i < START_RANDOM_MOVES; i++ {
-			g.MakeMove(random.SelectMoveDifferentThan(g, reversi.PASS_MOVE))
-			g.MakeMove(random.SelectMoveDifferentThan(g, reversi.PASS_MOVE))
+		if gameNumber%2 == 1 {
+			blackPlayer, whitePlayer = whitePlayer, blackPlayer
+			blackTimes, whiteTimes = whiteTimes, blackTimes
+			blackScore, whiteScore = whiteScore, blackScore
 		}
 
 		for !finished {
 			var move game.Move
 			start := time.Now()
 
-			if g.Turn > 0 {
-				// var policy []float32
-				// move, policy = player1.SelectMoveWithPolicy(g)
-				move = player1.SelectMove(g)
-				times1 = append(times1, time.Since(start))
-				// fmt.Println(policy)
+			if g.GetCurrentPlayerColor() == game.BLACK {
+				move = blackPlayer.SelectMove(g)
+				*blackTimes = append(*blackTimes, time.Since(start))
 			} else {
-				move = player2.SelectMove(g)
-				times2 = append(times2, time.Since(start))
+				move = whitePlayer.SelectMove(g)
+				*whiteTimes = append(*whiteTimes, time.Since(start))
+			}
+			finished, winner = g.MakeMove(move)
+
+			if *DRAW_BOARD {
+				g.DrawBoard()
+				fmt.Printf("\n")
+			}
+		}
+
+		if winner == 0 {
+			fmt.Printf("Game %d/%d: ended with a draw\n", gameNumber+1, *NUMBER_OF_GAMES)
+		} else {
+			if winner == game.BLACK {
+				*blackScore += 1
+			} else if winner == game.WHITE {
+				*whiteScore += 1
 			}
 
-			// g.DrawBoard()
+			if gameNumber%2 == 1 {
+				winner *= -1
+			}
 
-			// fmt.Printf("player %d was thinking for %s\n", (-g.Turn+1)/2+1, time.Since(start))
-			// fmt.Println(move)
-			finished, winner = g.MakeMove(move)
-			// g.DrawBoard()
-			// value := tfpredictor.Predict(gameToFeaturesFn(g))
-			// policy := tfpredictor.PredictPolicy(gameToFeaturesFn(g))
-			// fmt.Println(len(policy))
-			// fmt.Println("")
+			fmt.Printf("Game %d/%d: %d wins\n", gameNumber+1, *NUMBER_OF_GAMES, (-winner+1)/2+1)
 		}
-		g.DrawBoard()
-
-		edax.ClosePlayer()
-
-		fmt.Printf("Game %d/%d: %d wins\n", gameNumber+1, NUMBER_OF_GAMES, (-winner+1)/2+1)
-		totalScore += int(winner)
 	}
 
-	player1Wins := (NUMBER_OF_GAMES + totalScore) / 2
-	player2Wins := NUMBER_OF_GAMES - player1Wins
-
-	fmt.Printf("Total score: %d - %d (%d)\n", player1Wins, player2Wins, totalScore)
-	fmt.Printf("Player 1 was thinking for %s (average: %s, max: %s, median: %s)\n", sumTimes(times1), time.Duration(float64(sumTimes(times1))/float64(len(times1))), maxTime(times1), median(times1))
-	fmt.Printf("Player 2 was thinking for %s (average: %s, max: %s, median: %s)\n", sumTimes(times2), time.Duration(float64(sumTimes(times2))/float64(len(times2))), maxTime(times2), median(times2))
+	fmt.Printf("Total score: %d - %d\n", p1Score, p2Score)
+	fmt.Printf("Player 1 was thinking for %s (average: %s, max: %s, median: %s)\n", sumTimes(*times1), time.Duration(float64(sumTimes(*times1))/float64(len(*times1))), maxTime(*times1), median(*times1))
+	fmt.Printf("Player 2 was thinking for %s (average: %s, max: %s, median: %s)\n", sumTimes(*times2), time.Duration(float64(sumTimes(*times2))/float64(len(*times2))), maxTime(*times2), median(*times2))
 }
 
 func sumTimes(times []time.Duration) time.Duration {

@@ -15,6 +15,8 @@ func NewHumanPlayer() *HumanPlayer {
 func (player *HumanPlayer) SelectMove(g game.Game) game.Move {
 	var move game.Move
 
+	g.DrawBoard()
+	fmt.Println("")
 	fmt.Println(g.GetPossibleMoves())
 	fmt.Scan(&move)
 
