@@ -114,3 +114,24 @@ func Connect4ToBoard1Turn(c4game *ConnectFourGame) game.Features {
 
 	return features
 }
+
+func Connect4ToB1MT(c4game *ConnectFourGame) game.Features {
+	numberOfFeatures := WIDTH*HEIGHT + c4game.GetMaxPossibleMoves() + 1 // turn
+	features := make([][][]float32, numberOfFeatures)
+	for row := 0; row < numberOfFeatures; row++ {
+		features[row] = make([][]float32, 1)
+		features[row][0] = make([]float32, 1)
+	}
+
+	for i, field := range c4game.Board {
+		features[i][0][0] = float32(field)
+	}
+
+	for _, move := range c4game.GetPossibleMoves() {
+		features[int(move)+WIDTH*HEIGHT+1][0][0] = 1.0
+	}
+
+	features[numberOfFeatures-1][0][0] = float32(c4game.GetCurrentPlayerColor())
+
+	return features
+}

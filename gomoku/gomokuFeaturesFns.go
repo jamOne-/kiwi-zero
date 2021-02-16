@@ -56,3 +56,20 @@ func GomokuToBoardTurn(gomoku *GomokuGame) game.Features {
 
 	return oneHotBoard
 }
+
+func GomokuToBoard1Turn(gomoku *GomokuGame) game.Features {
+	numberOfFeatures := WIDTH*HEIGHT + 1
+	features := make([][][]float32, numberOfFeatures)
+	for row := 0; row < numberOfFeatures; row++ {
+		features[row] = make([][]float32, 1)
+		features[row][0] = make([]float32, 1)
+	}
+
+	for i, field := range gomoku.Board {
+		features[i][0][0] = float32(field)
+	}
+
+	features[numberOfFeatures-1][0][0] = float32(gomoku.GetCurrentPlayerColor())
+
+	return features
+}

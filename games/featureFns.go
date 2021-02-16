@@ -38,12 +38,14 @@ var CONNECT4_FEATURES_FNS = map[string]*FeaturesFnInfo{
 	"b3turn": &FeaturesFnInfo{"(6,7,5)", connectFour.ConvertConnect4FnToGeneralFeatuersFn(connectFour.Connect4ToBoardTurn)},
 	"b1turn": &FeaturesFnInfo{"(43,1,1)", connectFour.ConvertConnect4FnToGeneralFeatuersFn(connectFour.Connect4ToBoard1Turn)},
 	"bmt":    &FeaturesFnInfo{"(6,7,6)", connectFour.ConvertConnect4FnToGeneralFeatuersFn(connectFour.Connect4ToBoardMovesTurn)},
+	"b1mt":   &FeaturesFnInfo{"(51,1,1)", connectFour.ConvertConnect4FnToGeneralFeatuersFn(connectFour.Connect4ToB1MT)},
 }
 
 var GOMOKU_FEATURES_FNS = map[string]*FeaturesFnInfo{
 	"board3": &FeaturesFnInfo{"(8,8,3)", OneHotBoard3},
 	"board1": &FeaturesFnInfo{"(64,1,1)", gomoku.ConvertGomokuFnToGeneralFeatuersFn(gomoku.GomokuToBoard1)},
 	"b3turn": &FeaturesFnInfo{"(8,8,5)", gomoku.ConvertGomokuFnToGeneralFeatuersFn(gomoku.GomokuToBoardTurn)},
+	"b1turn": &FeaturesFnInfo{"(65,1,1)", gomoku.ConvertGomokuFnToGeneralFeatuersFn(gomoku.GomokuToBoard1Turn)},
 }
 
 func OneHotBoard3(game game.Game) game.Features {
