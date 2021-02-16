@@ -130,31 +130,37 @@ def get_fully_connected_model(
     optimize_policy=True,
 ):
     inputs = layers.Input(shape=input_shape)
-    model = layers.Flatten()(inputs)
+    common = layers.Flatten()(inputs)
+    value_out = common
+    policy_out = common
 
-    value_out = model
-    for i in range(layers_count - 1):
+    if layers_count > 1:
+        for i in range(layers_count - 2):
+            common = layers.Dense(
+                layer_units,
+                kernel_regularizer=regularizers.l2(regularizer_const),
+                bias_regularizer=regularizers.l2(regularizer_const),
+                activation='relu',
+            )(common)
+
         value_out = layers.Dense(
             layer_units,
             kernel_regularizer=regularizers.l2(regularizer_const),
             bias_regularizer=regularizers.l2(regularizer_const),
             activation='relu',
-        )(value_out)
+        )(common)
         value_out = layers.Dropout(dropout_rate)(value_out)
+
+        if optimize_policy:
+            policy_out = layers.Dense(
+                layer_units,
+                kernel_regularizer=regularizers.l2(regularizer_const),
+                bias_regularizer=regularizers.l2(regularizer_const),
+                activation='relu',
+            )(common)
+            policy_out = layers.Dropout(dropout_rate)(policy_out)
+
     value_out = layers.Dense(1, activation='sigmoid', name='value_out')(value_out)
-
-    policy_out = model
-
-    if optimize_policy:
-        policy_out = layers.Dense(layer_units, activation='relu')(policy_out)
-        policy_out = layers.Dropout(dropout_rate)(policy_out)
-        # policy_out = layers.Dense(layer_units, activation='relu')(policy_out)
-        # policy_out = layers.Dropout(dropout_rate)(policy_out)
-        # policy_out = layers.Dense(layer_units, activation='relu')(policy_out)
-        # policy_out = layers.Dropout(dropout_rate)(policy_out)
-        # policy_out = layers.Dense(layer_units, activation='relu')(policy_out)
-        # policy_out = layers.Dropout(dropout_rate)(policy_out)
-
     policy_out = layers.Dense(policy_length, activation='softmax', name='policy_out')(policy_out)
 
     ret = models.Model(

@@ -349,3 +349,24 @@ func ReversiToBoardTurn(game *reversi.ReversiGame) game.Features {
 
 	return oneHotBoard
 }
+
+func ReversiToB1MT(game *reversi.ReversiGame) game.Features {
+	numberOfFeatures := 8*8 + 65 + 1
+	features := make([][][]float32, numberOfFeatures)
+	for row := 0; row < numberOfFeatures; row++ {
+		features[row] = make([][]float32, 1)
+		features[row][0] = make([]float32, 1)
+	}
+
+	for i, field := range game.Board {
+		features[i][0][0] = float32(field)
+	}
+
+	for _, move := range game.GetPossibleMoves() {
+		features[int(move)+64+1][0][0] = 1.0
+	}
+
+	features[numberOfFeatures-1][0][0] = float32(game.GetCurrentPlayerColor())
+
+	return features
+}

@@ -3,7 +3,7 @@ package main
 import "github.com/spf13/viper"
 
 func initConfig() {
-	viper.SetDefault("GAME", "gomokurandom")
+	viper.SetDefault("GAME", "reversirandom")
 
 	viper.SetDefault("CHECKPOINT_EVERY", 25)
 	viper.SetDefault("COMPARE_AT_CHECKPOINTS", true)
@@ -12,7 +12,7 @@ func initConfig() {
 	viper.SetDefault("EVALUATOR_GAMES", 20)
 	viper.SetDefault("EVALUATOR_GAMES_AT_ONCE", 4)
 	viper.SetDefault("GAMES_PER_ITERATION", 50)
-	viper.SetDefault("GAME_TO_FEATURES_FN", "board3")
+	viper.SetDefault("GAME_TO_FEATURES_FN", "b1mt")
 	viper.SetDefault("INITIAL_WEIGHTS_PATH", "")
 	viper.SetDefault("MAX_BEST_PLAYERS_POOL_LENGTH", 10)
 	viper.SetDefault("MCTS_SIMULATIONS", 1500)
@@ -40,14 +40,14 @@ func initConfig() {
 	viper.SetDefault("OPTIMIZER_MAX_HISTORY_LENGTH", 150000)
 	viper.SetDefault("OPTIMIZER_OPTIMIZE_POLICY", true)
 
-	viper.SetDefault("OPTIMIZER_FULLY_CONNECTED", false)
-	viper.SetDefault("OPTIMIZER_FC_LAYERS_COUNT", 1)
+	viper.SetDefault("OPTIMIZER_FULLY_CONNECTED", true)
+	viper.SetDefault("OPTIMIZER_FC_LAYERS_COUNT", 8)
 	viper.SetDefault("OPTIMIZER_FC_LAYER_UNITS", 128)
 	viper.SetDefault("OPTIMIZER_FC_DROPOUT", 0.5)
 
 	viper.SetDefault("OPTIMIZER_CONV_FILTERS", "[64,64]")
 
-	viper.SetDefault("SELFPLAY_TEACHER", "mcts") // edax | mcts
+	viper.SetDefault("SELFPLAY_TEACHER", "") // edax | mcts
 	viper.SetDefault("SELFPLAY_TEACHER_EDAX_DEPTH", 1)
 	viper.SetDefault("SELFPLAY_TEACHER_MCTS_SIMULATIONS", 1000)
 
