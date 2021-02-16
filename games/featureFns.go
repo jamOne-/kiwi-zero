@@ -26,6 +26,7 @@ var REVERSI_FEATURES_FNS = map[string]*FeaturesFnInfo{
 	"boardmoves":     &FeaturesFnInfo{"(8,8,4)", reversiValueFns.ConvertReversiFnToGeneralFeatuersFn(reversiValueFns.ReversiToOneHotBoardMoves)},
 	"bmt":            &FeaturesFnInfo{"(8,8,6)", reversiValueFns.ConvertReversiFnToGeneralFeatuersFn(reversiValueFns.ReversiToOneHotBoardMovesTurn)},
 	"paddedmoves":    &FeaturesFnInfo{"(10,10,5)", reversiValueFns.ConvertReversiFnToGeneralFeatuersFn(reversiValueFns.ReversiToOneHotBoardPaddedMoves)},
+	"b3turn":         &FeaturesFnInfo{"(8,8,5)", reversiValueFns.ConvertReversiFnToGeneralFeatuersFn(reversiValueFns.ReversiToBoardTurn)},
 	"board1features": &FeaturesFnInfo{"(72,1,1)", reversiValueFns.ConvertReversiFnToGeneralFeatuersFn(reversiValueFns.ReversiToFeaturesExtended)},
 	"board1":         &FeaturesFnInfo{"(64,1,1)", reversiValueFns.ConvertReversiFnToGeneralFeatuersFn(reversiValueFns.ReversiToFeatures)},
 }

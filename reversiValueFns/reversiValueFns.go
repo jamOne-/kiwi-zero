@@ -318,3 +318,34 @@ func ReversiToOneHotBoardMovesTurn(game *reversi.ReversiGame) game.Features {
 
 	return features
 }
+
+func ReversiToBoardTurn(game *reversi.ReversiGame) game.Features {
+	emptyField := []float32{0, 1, 0, 0, 0}
+	whiteField := []float32{1, 0, 0, 0, 0}
+	blackField := []float32{0, 0, 1, 0, 0}
+	oneHotBoard := make([][][]float32, reversi.BOARD_SIZE)
+
+	turnDim := 3 + utils.BoolToInt(game.Turn == reversi.WHITE)
+	emptyField[turnDim] = 1
+	whiteField[turnDim] = 1
+	blackField[turnDim] = 1
+
+	for row := int8(0); row < reversi.BOARD_SIZE; row++ {
+		oneHotBoard[row] = make([][]float32, reversi.BOARD_SIZE)
+
+		for col := int8(0); col < reversi.BOARD_SIZE; col++ {
+			field := game.Board[row*reversi.BOARD_SIZE+col]
+
+			oneHotField := emptyField
+			if field == reversi.WHITE {
+				oneHotField = whiteField
+			} else if field == reversi.BLACK {
+				oneHotField = blackField
+			}
+
+			oneHotBoard[row][col] = oneHotField
+		}
+	}
+
+	return oneHotBoard
+}
