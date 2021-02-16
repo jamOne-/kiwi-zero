@@ -57,6 +57,47 @@ func Connect4ToBoardTurn(c4game *ConnectFourGame) game.Features {
 	return oneHotBoard
 }
 
+func Connect4ToBoardMovesTurn(c4game *ConnectFourGame) game.Features {
+	emptyField := []float32{0, 1, 0, 0, 0, 0}
+	whiteField := []float32{1, 0, 0, 0, 0, 0}
+	blackField := []float32{0, 0, 1, 0, 0, 0}
+	oneHotBoard := make([][][]float32, HEIGHT)
+
+	turnDim := 4 + utils.BoolToInt(c4game.Turn == WHITE)
+	emptyField[turnDim] = 1
+	whiteField[turnDim] = 1
+	blackField[turnDim] = 1
+
+	for row := int8(0); row < HEIGHT; row++ {
+		oneHotBoard[row] = make([][]float32, WIDTH)
+
+		for col := int8(0); col < WIDTH; col++ {
+			field := c4game.Board[row*WIDTH+col]
+
+			oneHotField := emptyField
+			if field == WHITE {
+				oneHotField = whiteField
+			} else if field == BLACK {
+				oneHotField = blackField
+			}
+
+			oneHotBoard[row][col] = oneHotField
+		}
+	}
+
+	possiblex := c4game.GetPossibleMoves()
+	for _, x := range possiblex {
+		y := HEIGHT - 1
+		for c4game.Board[y*WIDTH+int(x)] != EMPTY {
+			y--
+		}
+
+		oneHotBoard[y][x][3] = 1
+	}
+
+	return oneHotBoard
+}
+
 func Connect4ToBoard1Turn(c4game *ConnectFourGame) game.Features {
 	size := TOTAL_SIZE + 1
 	features := make([][][]float32, size)

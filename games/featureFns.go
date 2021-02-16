@@ -36,6 +36,7 @@ var CONNECT4_FEATURES_FNS = map[string]*FeaturesFnInfo{
 	"board1": &FeaturesFnInfo{"(42,1,1)", connectFour.ConvertConnect4FnToGeneralFeatuersFn(connectFour.Connect4ToBoard1)},
 	"b3turn": &FeaturesFnInfo{"(6,7,5)", connectFour.ConvertConnect4FnToGeneralFeatuersFn(connectFour.Connect4ToBoardTurn)},
 	"b1turn": &FeaturesFnInfo{"(43,1,1)", connectFour.ConvertConnect4FnToGeneralFeatuersFn(connectFour.Connect4ToBoard1Turn)},
+	"bmt":    &FeaturesFnInfo{"(6,7,6)", connectFour.ConvertConnect4FnToGeneralFeatuersFn(connectFour.Connect4ToBoardMovesTurn)},
 }
 
 var GOMOKU_FEATURES_FNS = map[string]*FeaturesFnInfo{
